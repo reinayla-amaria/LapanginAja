@@ -165,8 +165,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 10),
-                // Icon Google (Placeholder Icon)
-                const Icon(Icons.g_mobiledata, size: 40, color: Colors.red),
+                  Image.asset(
+              'assets/google_logo.png',
+              width: 60, 
+                  ),
 
                 const SizedBox(height: 30),
 

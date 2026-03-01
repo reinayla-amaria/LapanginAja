@@ -131,8 +131,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   "atau gunakan akun google anda untuk login",
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
+                const SizedBox(height: 10),
+                  Image.asset(
+              'assets/google_logo.png',
+              width: 60, 
+              ),
 
-                const SizedBox(height: 30),
+                const SizedBox(height: 20),
 
                 // 5. TOMBOL LOGIN
                 SizedBox(

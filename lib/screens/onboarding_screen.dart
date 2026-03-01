@@ -51,7 +51,7 @@ class OnboardingScreen extends StatelessWidget {
 
             // 2. Judul Utama
             const Text(
-              "Booking Lapangan\nLebih Mudah & Cepat",
+              "Booking Lapangan Lebih Mudah & Cepat",
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 28,
