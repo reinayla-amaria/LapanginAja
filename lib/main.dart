@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:mysql1/mysql1.dart';
 
 import 'providers/booking_provider.dart';
 import 'screens/splash_screen.dart';
@@ -9,11 +9,6 @@ import 'screens/splash_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-
-  await Supabase.initialize(
-    url: 'https://rhswbmovrttnufodyqsb.supabase.co', 
-    anonKey: 'sb_publishable_CAVki265USFSRxV1GIevTw_bXu6oyDC', 
-  );
 
   await initializeDateFormatting('id_ID', null);
 

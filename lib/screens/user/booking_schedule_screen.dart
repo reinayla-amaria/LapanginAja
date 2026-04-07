@@ -1,8 +1,10 @@
+
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Wajib untuk format tanggal
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
+import 'package:mysql1/mysql1.dart';
 import '../../models/court_model.dart';
 import 'payment_screen.dart';
+import '../../services/db_connection.dart';
 
 class BookingScheduleScreen extends StatefulWidget {
   final Court court;
@@ -13,18 +15,15 @@ class BookingScheduleScreen extends StatefulWidget {
 }
 
 class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
-  // --- STATE VARIABLES ---
-  String? _selectedField; // Nama lengkap (untuk logika)
+  String? _selectedField;
   String? _selectedTime;
   DateTime? _selectedDate;
   DateTime _focusedMonth = DateTime.now();
 
-  // List Lapangan (Dari Supabase)
   List<Court> _availableCourts = [];
   List<String> _fieldNames = [];
   bool _isLoadingCourts = true;
 
-  // Data Waktu (Bisa disesuaikan)
   final List<String> timeList = [
     '08:00 - 09:00',
     '09:00 - 10:00',
@@ -37,51 +36,60 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
   @override
   void initState() {
     super.initState();
-    // Set default awal
     _selectedField = widget.court.name;
     _fetchSiblingCourts();
   }
 
-  // --- AMBIL DATA LAPANGAN SATU GEDUNG ---
   Future<void> _fetchSiblingCourts() async {
-    try {
-      // Ambil "Kelapa Gading" dari "Kelapa Gading - Lapangan 1"
-      String venueName = widget.court.name.split(' - ')[0].trim();
+  setState(() => _isLoadingCourts = true);
 
-      final data = await Supabase.instance.client
-          .from('courts')
-          .select()
-          .ilike('name', '$venueName%') // Cari yang namanya mirip
-          .order('name', ascending: true);
+  try {
+    String venueName = widget.court.name.split(' - ')[0].trim();
 
-      final List<Court> fetchedCourts = (data as List)
-          .map((json) => Court.fromJson(json))
-          .toList();
+    final conn = await DBService.getConnection();
 
-      setState(() {
-        _availableCourts = fetchedCourts;
-        _fieldNames = fetchedCourts.map((c) => c.name).toList();
-        _isLoadingCourts = false;
+    Results results = await conn.query(
+      "SELECT id, nama_lapangan, harga_per_jam, foto, lokasi FROM lapangans WHERE nama_lapangan LIKE ? ORDER BY nama_lapangan ASC",
+      ['$venueName%'],
+    );
 
-        // Pastikan pilihan awal valid
-        if (!_fieldNames.contains(_selectedField) && _fieldNames.isNotEmpty) {
-          _selectedField = _fieldNames.first;
-        }
-      });
-    } catch (e) {
-      debugPrint("Error fetching courts: $e");
-      setState(() {
-        _isLoadingCourts = false;
-        _fieldNames = [widget.court.name];
-      });
-    }
+    final List<Court> fetchedCourts = results.map((row) {
+      return Court(
+        id: row['id'].toString(),
+        name: row['nama_lapangan'] ?? '',
+        location: row['lokasi'] ?? '',
+        pricePerHour: row['harga_per_jam'] != null
+            ? (row['harga_per_jam'] as num).toDouble()
+            : 0.0,
+        imageUrl: row['foto'] ?? '',
+        facilities: [],      // tidak ada di tabel lapangans
+        description: '',     // tidak ada di tabel lapangans
+      );
+    }).toList();
+
+    await conn.close();
+
+    setState(() {
+      _availableCourts = fetchedCourts;
+      _fieldNames = fetchedCourts.map((c) => c.name).toList();
+      _isLoadingCourts = false;
+
+      if (!_fieldNames.contains(_selectedField) && _fieldNames.isNotEmpty) {
+        _selectedField = _fieldNames.first;
+      }
+    });
+  } catch (e) {
+    debugPrint("Error fetching lapangans: $e");
+    setState(() {
+      _isLoadingCourts = false;
+      _fieldNames = [widget.court.name];
+    });
   }
+}
 
-  // Helper: Ambil URL Gambar sesuai lapangan yang dipilih
-  String _getCurrentCourtImage() {
+String _getCurrentCourtImage() {
     if (_availableCourts.isEmpty) return widget.court.imageUrl;
     try {
-      // Cari court object yang namanya cocok dengan dropdown
       return _availableCourts
           .firstWhere((c) => c.name == _selectedField)
           .imageUrl;
@@ -90,7 +98,6 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
     }
   }
 
-  // Validasi Form
   bool get _isFormValid =>
       _selectedField != null && _selectedTime != null && _selectedDate != null;
 
@@ -213,36 +220,41 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // GAMBAR LAPANGAN (DENGAN FALLBACK)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: SizedBox(
-                          width: 140,
-                          height: 100,
-                          child: Image.network(
-                            _getCurrentCourtImage(), // URL Dinamis
-                            fit: BoxFit.cover,
-
-                            // Loading State
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return const Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              );
-                            },
-
-                            // Error State (Fallback ke Asset)
-                            errorBuilder: (context, error, stackTrace) {
-                              return Image.asset(
-                                'assets/lapangan.png', // Pastikan file ini ada
-                                fit: BoxFit.cover,
-                              );
-                            },
-                          ),
-                        ),
-                      ),
+                  
+ClipRRect(
+  borderRadius: BorderRadius.circular(12),
+  child: SizedBox(
+    width: 140,
+    height: 100,
+    child: Builder(
+      builder: (context) {
+        final imageUrl = _getCurrentCourtImage();
+        if (imageUrl.isEmpty) {
+          return Image.asset(
+            'assets/lapangan.png',
+            fit: BoxFit.cover,
+          );
+        }
+        return Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const Center(
+              child: CircularProgressIndicator(strokeWidth: 2),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return Image.asset(
+              'assets/lapangan.png',
+              fit: BoxFit.cover,
+            );
+          },
+        );
+      },
+    ),
+  ),
+),
 
                       const SizedBox(width: 16),
 
