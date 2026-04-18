@@ -8,6 +8,7 @@ class SplashScreen extends StatefulWidget {
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
+
 class _SplashScreenState extends State<SplashScreen> {
   bool changeView = false;
 
@@ -41,13 +42,15 @@ class _SplashScreenState extends State<SplashScreen> {
             end: Alignment.bottomCenter,
             colors: changeView
                 ? [
-                    const Color(0xFF1565C0), 
-                    const Color(0xFF1565C0), 
+                    const Color.from(
+                      alpha: 1,
+                      red: 0.082,
+                      green: 0.396,
+                      blue: 0.753,
+                    ),
+                    const Color(0xFF093FB4),
                   ]
-                : [
-                    Colors.white,
-                    Colors.white,
-                  ],
+                : [Colors.white, Colors.white],
           ),
         ),
         child: Column(
@@ -58,9 +61,7 @@ class _SplashScreenState extends State<SplashScreen> {
               transitionBuilder: (child, animation) =>
                   FadeTransition(opacity: animation, child: child),
               child: Image.asset(
-                changeView
-                    ? 'assets/logo_white.png' 
-                    : 'assets/logo_blue.png',  
+                changeView ? 'assets/logo_white.png' : 'assets/logo_blue.png',
                 key: ValueKey(changeView),
                 width: 200,
               ),
@@ -68,7 +69,7 @@ class _SplashScreenState extends State<SplashScreen> {
             const SizedBox(height: 50),
             CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(
-                changeView ? Colors.white : Colors.blue,
+                changeView ? Colors.white : Color(0xFF093FB4),
               ),
             ),
           ],

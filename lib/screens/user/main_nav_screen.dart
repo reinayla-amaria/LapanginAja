@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
-import 'booking_screen.dart'; 
+import 'booking_screen.dart';
 import 'chat_screen.dart';
 import 'profile_screen.dart';
 
@@ -23,7 +23,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF1565C0);
+    const primaryBlue = Color(0xFF093FB4);
 
     return Scaffold(
       body: _pages[_selectedIndex],
@@ -42,12 +42,12 @@ class _MainNavScreenState extends State<MainNavScreen> {
           type: BottomNavigationBarType.fixed,
           selectedItemColor: Colors.white,
           unselectedItemColor: Colors.white60,
-          showSelectedLabels: false, 
+          showSelectedLabels: false,
           showUnselectedLabels: false,
           currentIndex: _selectedIndex,
           onTap: (index) {
             setState(() {
-              _selectedIndex = index; 
+              _selectedIndex = index;
             });
           },
           items: const [

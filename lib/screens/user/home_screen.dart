@@ -72,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     // ----------------------------
 
-    const primaryBlue = Color(0xFF1565C0);
+    const primaryBlue = Color(0xFF093FB4);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -115,9 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           border: Border.all(color: Colors.white, width: 2),
                           image: const DecorationImage(
                             // Ensure this filename matches your asset exactly
-                            image: AssetImage(
-                              'assets/anime 1.png',
-                            ),
+                            image: AssetImage('assets/anime 1.png'),
                             fit: BoxFit.cover,
                           ),
                         ),

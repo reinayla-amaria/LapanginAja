@@ -51,7 +51,7 @@ class _BookingScreenState extends State<BookingScreen> {
     }
     // ---------------------------------------------
 
-    const primaryBlue = Color(0xFF1565C0);
+    const primaryBlue = Color(0xFF093FB4);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),

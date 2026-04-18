@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '/services/google_auth_service.dart';
+import '/services/google_user_service.dart'; // ✅ TAMBAHIN INI
+import '../user/main_nav_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -13,6 +16,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  final GoogleAuthService _authService = GoogleAuthService();
+  final GoogleUserService _googleUserService = GoogleUserService(); // ✅ FIX
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,18 +31,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // 1. LOGO APLIKASI
                 const SizedBox(height: 20),
-                Image.asset(
-                  'assets/logo_blue.png',
-                  height: 80,
-                  fit: BoxFit.contain,
-                ),
-                const SizedBox(height: 10), // Corrected placement
-
+                Image.asset('assets/logo_blue.png', height: 80),
                 const SizedBox(height: 40),
 
-                // 2. HEADER TEXT
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -49,6 +47,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 5),
+
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -59,63 +58,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 const SizedBox(height: 30),
 
-                // 3. INPUT NAMA
+                // NAMA
                 TextFormField(
                   controller: _nameController,
                   decoration: InputDecoration(
                     hintText: "Nama Lengkap",
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 18,
-                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF1565C0),
-                        width: 2,
-                      ),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
                   ),
                   validator: (val) => val!.isEmpty ? "Nama wajib diisi" : null,
                 ),
                 const SizedBox(height: 16),
 
-                // 4. INPUT EMAIL
+                // EMAIL
                 TextFormField(
                   controller: _emailController,
                   decoration: InputDecoration(
                     hintText: "Email",
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 18,
-                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF1565C0),
-                        width: 2,
-                      ),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
                   ),
                   validator: (val) {
                     if (val == null || val.isEmpty) return "Email wajib diisi";
@@ -125,66 +88,71 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // 5. INPUT PASSWORD
+                // PASSWORD
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
                   decoration: InputDecoration(
                     hintText: "Password",
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 18,
-                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF1565C0),
-                        width: 2,
-                      ),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
                   ),
                   validator: (val) =>
                       val!.length < 6 ? "Minimal 6 karakter" : null,
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
-                // Teks Google
                 Text(
                   "atau gunakan akun Google anda untuk registrasi",
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
+
                 const SizedBox(height: 10),
-                  Image.asset(
-              'assets/google_logo.png',
-              width: 60, 
-                  ),
+
+                // ✅ GOOGLE BUTTON (FIX TOTAL)
+                InkWell(
+                  onTap: () async {
+                    final user = await _authService.signIn();
+                    if (user != null) {
+                      print("Register/Login berhasil: ${user.email}");
+
+                      try {
+                        await _googleUserService.registerGoogleUser(
+                          name: user.displayName ?? "",
+                          email: user.email,
+                          googleId: user.id,
+                          photoUrl: user.photoUrl ?? "",
+                        );
+                      } catch (e) {
+                        print("Error backend: $e");
+                      }
+
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MainNavScreen(),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Gagal login dengan Google"),
+                        ),
+                      );
+                    }
+                  },
+                  child: Image.asset('assets/google_logo.png', width: 60),
+                ),
 
                 const SizedBox(height: 30),
 
-                // 6. TOMBOL SIGN UP
+                // SIGN UP MANUAL
                 SizedBox(
                   width: double.infinity,
                   height: 55,
                   child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1565C0),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 2,
-                    ),
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -195,38 +163,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Navigator.pop(context);
                       }
                     },
-                    child: const Text(
-                      "Sign Up",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: const Text("Sign Up"),
                   ),
                 ),
 
                 const SizedBox(height: 20),
 
-                // 7. FOOTER LINK LOGIN
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text("Sudah punya akun? "),
                     GestureDetector(
-                      onTap: () {
-                        Navigator.pop(context); // Kembali ke Login
-                      },
+                      onTap: () => Navigator.pop(context),
                       child: const Text(
                         "Sign in",
                         style: TextStyle(
-                          color: Color(0xFF1565C0),
+                          color: Color(0xFF093FB4),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
               ],
             ),
           ),

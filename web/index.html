@@ -14,6 +14,30 @@
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
+
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGPEd3oGJsSRQbE4HVTQgFg5gbsijTXyg",
+      authDomain: "lapanginaja.firebaseapp.com",
+      projectId: "lapanginaja",
+      storageBucket: "lapanginaja.firebasestorage.app",
+      messagingSenderId: "456444985147",
+      appId: "1:456444985147:web:7054b40f18d3990d1a011e",
+      measurementId: "G-T9B7FS43J9"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+  </script>
+
+  <!-- Google Sign In Client ID -->
+  <meta name="google-signin-client_id" content="456444985147-c4g2j2402jv9f0mb067v1qhl8k9klaem.apps.googleusercontent.com">
+
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">

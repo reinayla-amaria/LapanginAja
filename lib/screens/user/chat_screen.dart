@@ -22,7 +22,7 @@ class _ChatScreenState extends State<ChatScreen> {
     },
   ];
 
-  final Color primaryBlue = const Color(0xFF1565C0);
+  final Color primaryBlue = const Color(0xFF093FB4);
 
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty) return;
@@ -44,7 +44,7 @@ class _ChatScreenState extends State<ChatScreen> {
           _messages.add({
             "text":
                 "Terima kasih telah menghubungi kami. Admin sedang mengecek pesan Anda.",
-            "isUser": false, 
+            "isUser": false,
             "time": DateFormat('HH:mm').format(DateTime.now()),
           });
         });

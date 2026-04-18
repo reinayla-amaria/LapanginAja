@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:mysql1/mysql1.dart';
-
 import 'providers/booking_provider.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-
 
   await initializeDateFormatting('id_ID', null);
 
@@ -22,24 +18,23 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => BookingProvider()),
-      ],
+      providers: [ChangeNotifierProvider(create: (_) => BookingProvider())],
       child: MaterialApp(
         title: 'Lapangin.Aja',
         debugShowCheckedModeBanner: false,
 
         theme: ThemeData(
-          primarySwatch: Colors.blue,
+          colorScheme: ColorScheme.fromSeed(seedColor: Color(0xFF093FB4)),
+
           useMaterial3: true,
           appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFF1565C0), 
+            backgroundColor: Color(0xFF093FB4),
             foregroundColor: Colors.white,
             centerTitle: true,
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1565C0),
+              backgroundColor: const Color(0xFF093FB4),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),

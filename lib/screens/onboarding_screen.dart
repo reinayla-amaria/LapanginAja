@@ -6,7 +6,7 @@ class OnboardingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFF1565C0);
+    const primaryColor = Color(0xFF093FB4);
     const textColor = Color(0xFF2C3E50);
 
     return Scaffold(
@@ -71,7 +71,6 @@ class OnboardingScreen extends StatelessWidget {
 
             const Spacer(flex: 3),
 
-
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -102,7 +101,7 @@ class OnboardingScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 30), 
+            const SizedBox(height: 30),
           ],
         ),
       ),
@@ -121,7 +120,7 @@ class OnboardingScreen extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       margin: const EdgeInsets.symmetric(horizontal: 4),
       height: 8,
-      width: isActive ? 24 : 8, 
+      width: isActive ? 24 : 8,
       decoration: BoxDecoration(
         color: isActive ? color : Colors.grey[300],
         borderRadius: BorderRadius.circular(4),

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mysql1/mysql1.dart';
@@ -41,53 +40,53 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
   }
 
   Future<void> _fetchSiblingCourts() async {
-  setState(() => _isLoadingCourts = true);
+    setState(() => _isLoadingCourts = true);
 
-  try {
-    String venueName = widget.court.name.split(' - ')[0].trim();
+    try {
+      String venueName = widget.court.name.split(' - ')[0].trim();
 
-    final conn = await DBService.getConnection();
+      final conn = await DBService.getConnection();
 
-    Results results = await conn.query(
-      "SELECT id, nama_lapangan, harga_per_jam, foto, lokasi FROM lapangans WHERE nama_lapangan LIKE ? ORDER BY nama_lapangan ASC",
-      ['$venueName%'],
-    );
-
-    final List<Court> fetchedCourts = results.map((row) {
-      return Court(
-        id: row['id'].toString(),
-        name: row['nama_lapangan'] ?? '',
-        location: row['lokasi'] ?? '',
-        pricePerHour: row['harga_per_jam'] != null
-            ? (row['harga_per_jam'] as num).toDouble()
-            : 0.0,
-        imageUrl: row['foto'] ?? '',
-        facilities: [],      // tidak ada di tabel lapangans
-        description: '',     // tidak ada di tabel lapangans
+      Results results = await conn.query(
+        "SELECT id, nama_lapangan, harga_per_jam, foto, lokasi FROM lapangans WHERE nama_lapangan LIKE ? ORDER BY nama_lapangan ASC",
+        ['$venueName%'],
       );
-    }).toList();
 
-    await conn.close();
+      final List<Court> fetchedCourts = results.map((row) {
+        return Court(
+          id: row['id'].toString(),
+          name: row['nama_lapangan'] ?? '',
+          location: row['lokasi'] ?? '',
+          pricePerHour: row['harga_per_jam'] != null
+              ? (row['harga_per_jam'] as num).toDouble()
+              : 0.0,
+          imageUrl: row['foto'] ?? '',
+          facilities: [], // tidak ada di tabel lapangans
+          description: '', // tidak ada di tabel lapangans
+        );
+      }).toList();
 
-    setState(() {
-      _availableCourts = fetchedCourts;
-      _fieldNames = fetchedCourts.map((c) => c.name).toList();
-      _isLoadingCourts = false;
+      await conn.close();
 
-      if (!_fieldNames.contains(_selectedField) && _fieldNames.isNotEmpty) {
-        _selectedField = _fieldNames.first;
-      }
-    });
-  } catch (e) {
-    debugPrint("Error fetching lapangans: $e");
-    setState(() {
-      _isLoadingCourts = false;
-      _fieldNames = [widget.court.name];
-    });
+      setState(() {
+        _availableCourts = fetchedCourts;
+        _fieldNames = fetchedCourts.map((c) => c.name).toList();
+        _isLoadingCourts = false;
+
+        if (!_fieldNames.contains(_selectedField) && _fieldNames.isNotEmpty) {
+          _selectedField = _fieldNames.first;
+        }
+      });
+    } catch (e) {
+      debugPrint("Error fetching lapangans: $e");
+      setState(() {
+        _isLoadingCourts = false;
+        _fieldNames = [widget.court.name];
+      });
+    }
   }
-}
 
-String _getCurrentCourtImage() {
+  String _getCurrentCourtImage() {
     if (_availableCourts.isEmpty) return widget.court.imageUrl;
     try {
       return _availableCourts
@@ -103,7 +102,7 @@ String _getCurrentCourtImage() {
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF1565C0);
+    const primaryBlue = Color(0xFF093FB4);
     const accentGreen = Color(0xFF00C853);
 
     // LOGIKA PEMOTONGAN NAMA UNTUK TAMPILAN
@@ -153,10 +152,7 @@ String _getCurrentCourtImage() {
                     // Logo di Tengah
                     Expanded(
                       child: Center(
-                        child: Image.asset(
-                          'assets/logo_white.png',
-                          height: 40,
-                        ),
+                        child: Image.asset('assets/logo_white.png', height: 40),
                       ),
                     ),
 
@@ -220,41 +216,43 @@ String _getCurrentCourtImage() {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  
-ClipRRect(
-  borderRadius: BorderRadius.circular(12),
-  child: SizedBox(
-    width: 140,
-    height: 100,
-    child: Builder(
-      builder: (context) {
-        final imageUrl = _getCurrentCourtImage();
-        if (imageUrl.isEmpty) {
-          return Image.asset(
-            'assets/lapangan.png',
-            fit: BoxFit.cover,
-          );
-        }
-        return Image.network(
-          imageUrl,
-          fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return const Center(
-              child: CircularProgressIndicator(strokeWidth: 2),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) {
-            return Image.asset(
-              'assets/lapangan.png',
-              fit: BoxFit.cover,
-            );
-          },
-        );
-      },
-    ),
-  ),
-),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SizedBox(
+                          width: 140,
+                          height: 100,
+                          child: Builder(
+                            builder: (context) {
+                              final imageUrl = _getCurrentCourtImage();
+                              if (imageUrl.isEmpty) {
+                                return Image.asset(
+                                  'assets/lapangan.png',
+                                  fit: BoxFit.cover,
+                                );
+                              }
+                              return Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return const Center(
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      );
+                                    },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Image.asset(
+                                    'assets/lapangan.png',
+                                    fit: BoxFit.cover,
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ),
 
                       const SizedBox(width: 16),
 
@@ -537,7 +535,7 @@ ClipRRect(
                       decoration: isSelected
                           ? const BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.blue,
+                              color: Color(0xFF093FB4),
                             )
                           : null,
                       alignment: Alignment.center,

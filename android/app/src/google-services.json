@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "456444985147",
+    "project_id": "lapanginaja",
+    "storage_bucket": "lapanginaja.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:456444985147:android:fc4dc30efdcc0cc61a011e",
+        "android_client_info": {
+          "package_name": "LapanginAja.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAu-j9iXGfr2NoToV9zJqImIaAnQNg84A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

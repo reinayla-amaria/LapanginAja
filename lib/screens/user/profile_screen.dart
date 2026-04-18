@@ -32,12 +32,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfileData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _usernameController.text =
-          prefs.getString('user_username') ?? "";
-      _nameController.text =
-          prefs.getString('user_name') ?? "";
-      _emailController.text =
-          prefs.getString('user_email') ?? "";
+      _usernameController.text = prefs.getString('user_username') ?? "";
+      _nameController.text = prefs.getString('user_name') ?? "";
+      _emailController.text = prefs.getString('user_email') ?? "";
       _phoneController.text = prefs.getString('user_phone') ?? "";
 
       String? imagePath = prefs.getString('user_image');
@@ -86,7 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildPickOption(IconData icon, String label, ImageSource source) {
     return GestureDetector(
       onTap: () async {
-        Navigator.pop(context); 
+        Navigator.pop(context);
         final XFile? pickedFile = await _picker.pickImage(source: source);
 
         if (pickedFile != null) {
@@ -169,13 +166,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryBlue = Color(0xFF1565C0);
+    const primaryBlue = Color(0xFF093FB4);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: const Text("Profil Saya"),
-        backgroundColor: primaryBlue,
+        backgroundColor: Color(0xFF093FB4),
         foregroundColor: Colors.white,
         centerTitle: true,
         elevation: 0,
@@ -342,11 +339,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           decoration: InputDecoration(
             filled: true,
             fillColor: isEditable ? Colors.white : Colors.grey[200],
-            prefixIcon: Icon(icon, color: const Color(0xFF1565C0)),
+            prefixIcon: Icon(icon, color: const Color(0xFF093FB4)),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: isEditable
-                  ? const BorderSide(color: Colors.blue)
+                  ? const BorderSide(color: Color(0xFF093FB4))
                   : BorderSide.none,
             ),
             contentPadding: const EdgeInsets.symmetric(

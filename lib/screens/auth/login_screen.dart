@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'register_screen.dart';
-// UBAH IMPORT: Panggil MainNavScreen, bukan HomeScreen
 import '../user/main_nav_screen.dart';
+import '/services/google_auth_service.dart';
+import '/services/google_user_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +15,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  final GoogleAuthService _authService = GoogleAuthService(); // ✅ FIX
+  final GoogleUserService _googleUserService = GoogleUserService();
 
   @override
   Widget build(BuildContext context) {
@@ -29,16 +33,10 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const SizedBox(height: 60),
 
-                // 1. LOGO
-                Image.asset(
-                  'assets/logo_blue.png',
-                  height: 120,
-                  fit: BoxFit.contain,
-                ),
+                Image.asset('assets/logo_blue.png', height: 120),
 
                 const SizedBox(height: 60),
 
-                // 2. HEADER TEXT
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -50,7 +48,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 8),
+
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -61,100 +61,86 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 30),
 
-                // 3. INPUT EMAIL
                 TextFormField(
                   controller: _emailController,
                   decoration: InputDecoration(
                     hintText: "Email",
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 18,
-                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF1565C0),
-                        width: 2,
-                      ),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
                   ),
                   validator: (val) => val!.isEmpty ? "Email wajib diisi" : null,
                 ),
 
                 const SizedBox(height: 16),
 
-                // 4. INPUT PASSWORD
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
                   decoration: InputDecoration(
                     hintText: "Password",
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 18,
-                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF1565C0),
-                        width: 2,
-                      ),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
                   ),
                   validator: (val) =>
                       val!.isEmpty ? "Password wajib diisi" : null,
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
 
                 Text(
                   "atau gunakan akun google anda untuk login",
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
+
                 const SizedBox(height: 10),
-                  Image.asset(
-              'assets/google_logo.png',
-              width: 60, 
-              ),
+
+                // ✅ GOOGLE LOGIN
+                InkWell(
+                  onTap: () async {
+                    final user = await _authService.signIn();
+
+                    if (user != null) {
+                      print("Login berhasil: ${user.email}");
+
+                      try {
+                        await _googleUserService.registerGoogleUser(
+                          name: user.displayName ?? "",
+                          email: user.email,
+                          googleId: user.id,
+                          photoUrl: user.photoUrl ?? "",
+                        );
+                      } catch (e) {
+                        print("Error backend: $e");
+                      }
+
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MainNavScreen(),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Gagal login dengan Google"),
+                        ),
+                      );
+                    }
+                  },
+                  child: Image.asset('assets/google_logo.png', width: 60),
+                ),
 
                 const SizedBox(height: 20),
 
-                // 5. TOMBOL LOGIN
+                // LOGIN MANUAL
                 SizedBox(
                   width: double.infinity,
                   height: 55,
                   child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1565C0),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 2,
-                    ),
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
-                        // PERBAIKAN: Arahkan ke MainNavScreen agar ada Menu Bawah
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
@@ -163,19 +149,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         );
                       }
                     },
-                    child: const Text(
-                      "Login",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: const Text("Login", style: TextStyle(fontSize: 18)),
                   ),
                 ),
 
                 const SizedBox(height: 20),
 
-                // 6. LINK REGISTER
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -192,7 +171,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text(
                         "Sign Up",
                         style: TextStyle(
-                          color: Color(0xFF1565C0),
+                          color: Color(0xFF093FB4),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
