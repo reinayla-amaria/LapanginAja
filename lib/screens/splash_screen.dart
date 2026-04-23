@@ -1,9 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'onboarding_screen.dart';
+import '../screens/user/main_nav_screen.dart';
+import '../screens/auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  final bool isLoggedIn; // Tambahkan variabel ini
+
+  // Update Constructor untuk menerima status login
+  const SplashScreen({super.key, required this.isLoggedIn});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -16,16 +21,30 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
 
+    // Efek perubahan warna background setelah 2 detik
     Timer(const Duration(seconds: 2), () {
-      setState(() {
-        changeView = true;
-      });
+      if (mounted) {
+        setState(() {
+          changeView = true;
+        });
+      }
     });
 
+    // Pindah halaman setelah 4 detik
     Timer(const Duration(seconds: 4), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-      );
+      if (mounted) {
+        if (widget.isLoggedIn) {
+          // Jika sudah login, langsung ke navigasi utama
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const MainNavScreen()),
+          );
+        } else {
+          // Jika belum login, ke Onboarding dulu (atau LoginScreen)
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+          );
+        }
+      }
     });
   }
 
@@ -42,13 +61,8 @@ class _SplashScreenState extends State<SplashScreen> {
             end: Alignment.bottomCenter,
             colors: changeView
                 ? [
-                    const Color.from(
-                      alpha: 1,
-                      red: 0.082,
-                      green: 0.396,
-                      blue: 0.753,
-                    ),
-                    const Color(0xFF093FB4),
+                    const Color(0xFF1565C0), // Biru agak terang
+                    const Color(0xFF093FB4), // Biru utama
                   ]
                 : [Colors.white, Colors.white],
           ),
@@ -61,6 +75,7 @@ class _SplashScreenState extends State<SplashScreen> {
               transitionBuilder: (child, animation) =>
                   FadeTransition(opacity: animation, child: child),
               child: Image.asset(
+                // Pastikan path asset ini benar di folder kamu
                 changeView ? 'assets/logo_white.png' : 'assets/logo_blue.png',
                 key: ValueKey(changeView),
                 width: 200,
@@ -69,7 +84,7 @@ class _SplashScreenState extends State<SplashScreen> {
             const SizedBox(height: 50),
             CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(
-                changeView ? Colors.white : Color(0xFF093FB4),
+                changeView ? Colors.white : const Color(0xFF093FB4),
               ),
             ),
           ],

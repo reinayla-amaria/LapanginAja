@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'register_screen.dart';
 import '../user/main_nav_screen.dart';
 import '/services/google_auth_service.dart';
-import '/services/google_user_service.dart';
+import '/providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,12 +16,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
-  final GoogleAuthService _authService = GoogleAuthService(); // ✅ FIX
-  final GoogleUserService _googleUserService = GoogleUserService();
+  final GoogleAuthService _authService = GoogleAuthService();
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -32,9 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 60),
-
                 Image.asset('assets/logo_blue.png', height: 120),
-
                 const SizedBox(height: 60),
 
                 Align(
@@ -48,9 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -58,7 +55,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                 ),
-
                 const SizedBox(height: 30),
 
                 TextFormField(
@@ -71,7 +67,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   validator: (val) => val!.isEmpty ? "Email wajib diisi" : null,
                 ),
-
                 const SizedBox(height: 16),
 
                 TextFormField(
@@ -86,52 +81,45 @@ class _LoginScreenState extends State<LoginScreen> {
                   validator: (val) =>
                       val!.isEmpty ? "Password wajib diisi" : null,
                 ),
-
                 const SizedBox(height: 20),
 
                 Text(
                   "atau gunakan akun google anda untuk login",
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
-
                 const SizedBox(height: 10),
 
-                // ✅ GOOGLE LOGIN
+                // GOOGLE LOGIN
                 InkWell(
                   onTap: () async {
                     final user = await _authService.signIn();
-
                     if (user != null) {
-                      print("Login berhasil: ${user.email}");
+                      final result = await authProvider.googleLogin(
+                        name: user.displayName ?? "",
+                        email: user.email,
+                        googleId: user.id,
+                      );
 
-                      try {
-                        await _googleUserService.registerGoogleUser(
-                          name: user.displayName ?? "",
-                          email: user.email,
-                          googleId: user.id,
-                          photoUrl: user.photoUrl ?? "",
+                      if (result['status'] == 'success') {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const MainNavScreen(),
+                          ),
                         );
-                      } catch (e) {
-                        print("Error backend: $e");
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              result['message'] ?? 'Gagal login dengan Google',
+                            ),
+                          ),
+                        );
                       }
-
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const MainNavScreen(),
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Gagal login dengan Google"),
-                        ),
-                      );
                     }
                   },
                   child: Image.asset('assets/google_logo.png', width: 60),
                 ),
-
                 const SizedBox(height: 20),
 
                 // LOGIN MANUAL
@@ -139,20 +127,38 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: double.infinity,
                   height: 55,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MainNavScreen(),
-                          ),
-                        );
-                      }
-                    },
-                    child: const Text("Login", style: TextStyle(fontSize: 18)),
+                    onPressed: authProvider.isLoading
+                        ? null
+                        : () async {
+                            if (_formKey.currentState!.validate()) {
+                              final result = await authProvider.login(
+                                _emailController.text,
+                                _passwordController.text,
+                              );
+
+                              if (result['status'] == 'success') {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const MainNavScreen(),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      result['message'] ?? 'Login gagal',
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    child: authProvider.isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text("Login", style: TextStyle(fontSize: 18)),
                   ),
                 ),
-
                 const SizedBox(height: 20),
 
                 Row(

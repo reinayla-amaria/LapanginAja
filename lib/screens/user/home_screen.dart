@@ -50,8 +50,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final bookingProv = Provider.of<BookingProvider>(context);
-    final List<Court> allCourts = bookingProv.courts;
     final List<Booking> myBookings = bookingProv.bookings;
+    final List<Court> allCourts = bookingProv.courts;
 
     // --- SEARCH FILTER LOGIC ---
     final Set<String> seenVenues = {};

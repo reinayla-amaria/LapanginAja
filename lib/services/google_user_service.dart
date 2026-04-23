@@ -2,7 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class GoogleUserService {
-  final String baseUrl = "https://your-backend.com/api"; // Ganti sesuai backend
+  final String baseUrl = "http://157.10.253.206:8080/api";
 
   Future<void> registerGoogleUser({
     required String name,

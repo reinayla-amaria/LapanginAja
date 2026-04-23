@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '/services/google_auth_service.dart';
-import '/services/google_user_service.dart'; // ✅ TAMBAHIN INI
+import '/providers/auth_provider.dart';
 import '../user/main_nav_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -15,12 +16,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
   final GoogleAuthService _authService = GoogleAuthService();
-  final GoogleUserService _googleUserService = GoogleUserService(); // ✅ FIX
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -47,7 +48,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 5),
-
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -55,10 +55,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                 ),
-
                 const SizedBox(height: 30),
 
-                // NAMA
                 TextFormField(
                   controller: _nameController,
                   decoration: InputDecoration(
@@ -71,7 +69,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // EMAIL
                 TextFormField(
                   controller: _emailController,
                   decoration: InputDecoration(
@@ -88,7 +85,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // PASSWORD
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
@@ -99,53 +95,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   validator: (val) =>
-                      val!.length < 6 ? "Minimal 6 karakter" : null,
+                      val!.length < 8 ? "Minimal 8 karakter" : null,
                 ),
-
                 const SizedBox(height: 20),
 
                 Text(
                   "atau gunakan akun Google anda untuk registrasi",
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
-
                 const SizedBox(height: 10),
 
-                // ✅ GOOGLE BUTTON (FIX TOTAL)
+                // GOOGLE REGISTER
                 InkWell(
                   onTap: () async {
                     final user = await _authService.signIn();
                     if (user != null) {
-                      print("Register/Login berhasil: ${user.email}");
+                      final result = await authProvider.googleLogin(
+                        name: user.displayName ?? "",
+                        email: user.email,
+                        googleId: user.id,
+                      );
 
-                      try {
-                        await _googleUserService.registerGoogleUser(
-                          name: user.displayName ?? "",
-                          email: user.email,
-                          googleId: user.id,
-                          photoUrl: user.photoUrl ?? "",
+                      if (result['status'] == 'success') {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const MainNavScreen(),
+                          ),
                         );
-                      } catch (e) {
-                        print("Error backend: $e");
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              result['message'] ?? 'Gagal login dengan Google',
+                            ),
+                          ),
+                        );
                       }
-
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const MainNavScreen(),
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Gagal login dengan Google"),
-                        ),
-                      );
                     }
                   },
                   child: Image.asset('assets/google_logo.png', width: 60),
                 ),
-
                 const SizedBox(height: 30),
 
                 // SIGN UP MANUAL
@@ -153,20 +143,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   width: double.infinity,
                   height: 55,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Registrasi Berhasil! Silakan Login"),
-                          ),
-                        );
-                        Navigator.pop(context);
-                      }
-                    },
-                    child: const Text("Sign Up"),
+                    onPressed: authProvider.isLoading
+                        ? null
+                        : () async {
+                            if (_formKey.currentState!.validate()) {
+                              final result = await authProvider.register(
+                                name: _nameController.text,
+                                email: _emailController.text,
+                                password: _passwordController.text,
+                              );
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    result['message'] ?? 'Registrasi gagal',
+                                  ),
+                                ),
+                              );
+
+                              if (result['status'] == 'success') {
+                                Navigator.pop(context);
+                              }
+                            }
+                          },
+                    child: authProvider.isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text("Sign Up"),
                   ),
                 ),
-
                 const SizedBox(height: 20),
 
                 Row(

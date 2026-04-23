@@ -28,24 +28,19 @@ class CourtDetailScreen extends StatelessWidget {
             right: 0,
             height: 300,
             child: Image.network(
-              court.imageUrl, 
+              court.imageUrl,
               fit: BoxFit.cover,
-              
+
               loadingBuilder: (context, child, loadingProgress) {
                 if (loadingProgress == null) return child;
                 return Container(
                   color: Colors.grey[200],
-                  child: const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  child: const Center(child: CircularProgressIndicator()),
                 );
               },
 
               errorBuilder: (context, error, stackTrace) {
-                return Image.asset(
-                  'assets/lapangan.png', 
-                  fit: BoxFit.cover,
-                );
+                return Image.asset('assets/lapangan.png', fit: BoxFit.cover);
               },
             ),
           ),
@@ -64,7 +59,7 @@ class CourtDetailScreen extends StatelessWidget {
           ),
 
           Positioned.fill(
-            top: 250, 
+            top: 250,
             child: Container(
               padding: const EdgeInsets.fromLTRB(24, 30, 24, 0),
               decoration: const BoxDecoration(
@@ -143,7 +138,11 @@ class CourtDetailScreen extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.location_on, color: Colors.red, size: 18),
+                      const Icon(
+                        Icons.location_on,
+                        color: Colors.red,
+                        size: 18,
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
@@ -169,8 +168,8 @@ class CourtDetailScreen extends StatelessWidget {
                     runSpacing: 8,
                     children: court.facilities.isNotEmpty
                         ? court.facilities
-                            .map((fas) => _buildFacilityChip(fas))
-                            .toList()
+                              .map((fas) => _buildFacilityChip(fas))
+                              .toList()
                         : [
                             const Text(
                               "- Tidak ada data fasilitas -",
@@ -194,7 +193,10 @@ class CourtDetailScreen extends StatelessWidget {
                           children: [
                             const Text(
                               "Harga per-Jam",
-                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
                             ),
                             Text(
                               currencyFormatter.format(court.pricePerHour),
