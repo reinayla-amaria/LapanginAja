@@ -4,11 +4,12 @@ class DBService {
   static Future<MySqlConnection> getConnection() async {
     return await MySqlConnection.connect(
       ConnectionSettings(
-        host: '127.0.0.1', // ganti dengan IP / hostname MySQL
+        host: 'byiqomiqoan10dwxncid-mysql.services.clever-cloud.com', // PAKAI 10
         port: 3306,
-        user: 'root', // username MySQL
-        password: ' ', // password MySQL
-        db: 'db_lapangan', // nama database
+        user: 'uwpggsleh944hpyo',
+        password: 'ayniqLbgmRsG2kDeO14t',
+        db: 'byiqomiqoan10dwxncid', // PAKAI 10
+        timeout: const Duration(seconds: 30),
       ),
     );
   }

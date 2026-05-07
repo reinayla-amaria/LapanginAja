@@ -4,6 +4,9 @@ import 'package:mysql1/mysql1.dart';
 import '../../models/court_model.dart';
 import 'payment_screen.dart';
 import '../../services/db_connection.dart';
+import 'package:provider/provider.dart';
+import '../../providers/booking_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class BookingScheduleScreen extends StatefulWidget {
   final Court court;
@@ -11,6 +14,28 @@ class BookingScheduleScreen extends StatefulWidget {
 
   @override
   State<BookingScheduleScreen> createState() => _BookingScheduleScreenState();
+}
+
+final List<String> timeList = [
+  "08:00 - 09:00",
+  "09:00 - 10:00",
+  "10:00 - 11:00",
+  "11:00 - 12:00",
+  "13:00 - 14:00",
+  "14:00 - 15:00",
+  "15:00 - 16:00",
+  "16:00 - 17:00",
+  "17:00 - 18:00",
+  "19:00 - 20:00",
+  "20:00 - 21:00",
+  "21:00 - 22:00",
+];
+
+Future<String> _getLoggedInUserId() async {
+  final prefs = await SharedPreferences.getInstance();
+  // Sesuaikan key-nya (misal 'user_id' atau 'userId') dengan saat kamu login
+  final userId = prefs.getString('user_id');
+  return userId ?? "0"; // Jika null, kembalikan "0" sebagai tanda belum login
 }
 
 class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
@@ -23,33 +48,29 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
   List<String> _fieldNames = [];
   bool _isLoadingCourts = true;
 
-  final List<String> timeList = [
-    '08:00 - 09:00',
-    '09:00 - 10:00',
-    '10:00 - 11:00',
-    '16:00 - 17:00',
-    '19:00 - 20:00',
-    '20:00 - 21:00',
-  ];
-
   @override
   void initState() {
     super.initState();
-    _selectedField = widget.court.name;
+    // REVISI: Jangan split nama di sini, karena court.name sekarang adalah nama Mitra
+    _selectedField = null;
     _fetchSiblingCourts();
   }
 
   Future<void> _fetchSiblingCourts() async {
+    if (!mounted) return;
     setState(() => _isLoadingCourts = true);
 
     try {
-      String venueName = widget.court.name.split(' - ')[0].trim();
-
       final conn = await DBService.getConnection();
 
+      // REVISI: Gunakan ID Mitra untuk mencari semua lapangan di bawah gedung yang sama
+      // Asumsi: widget.court.id adalah ID yang unik untuk mitra tersebut
+      // Jika database kamu menggunakan relasi parent-child, sesuaikan query ini:
       Results results = await conn.query(
-        "SELECT id, nama_lapangan, harga_per_jam, foto, lokasi FROM lapangans WHERE nama_lapangan LIKE ? ORDER BY nama_lapangan ASC",
-        ['$venueName%'],
+        "SELECT id, nama_lapangan, lokasi, harga_per_jam, foto FROM lapangans WHERE nama_lapangan LIKE ?",
+        [
+          '%${widget.court.name}%',
+        ], // Mencari yang namanya mengandung nama mitra
       );
 
       final List<Court> fetchedCourts = results.map((row) {
@@ -57,44 +78,41 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
           id: row['id'].toString(),
           name: row['nama_lapangan'] ?? '',
           location: row['lokasi'] ?? '',
-          pricePerHour: row['harga_per_jam'] != null
-              ? (row['harga_per_jam'] as num).toDouble()
-              : 0.0,
+          pricePerHour: double.tryParse(row['harga_per_jam'].toString()) ?? 0.0,
           imageUrl: row['foto'] ?? '',
-          facilities: [], // tidak ada di tabel lapangans
-          description: '', // tidak ada di tabel lapangans
+          facilities: ["Parkir", "Toilet"],
+          description: "Lapangan olahraga berkualitas.",
         );
       }).toList();
 
       await conn.close();
 
-      setState(() {
-        _availableCourts = fetchedCourts;
-        _fieldNames = fetchedCourts.map((c) => c.name).toList();
-        _isLoadingCourts = false;
+      if (mounted) {
+        setState(() {
+          _availableCourts = fetchedCourts;
+          // Ambil nama lapangan (misal: "Lapangan 1", "Lapangan 2")
+          _fieldNames = fetchedCourts.map((c) => c.name).toList();
+          _isLoadingCourts = false;
 
-        if (!_fieldNames.contains(_selectedField) && _fieldNames.isNotEmpty) {
-          _selectedField = _fieldNames.first;
-        }
-      });
+          // Set default pilihan ke item pertama jika tersedia
+          if (_fieldNames.isNotEmpty) {
+            _selectedField = _fieldNames.first;
+          }
+        });
+      }
     } catch (e) {
       debugPrint("Error fetching lapangans: $e");
-      setState(() {
-        _isLoadingCourts = false;
-        _fieldNames = [widget.court.name];
-      });
+      if (mounted) setState(() => _isLoadingCourts = false);
     }
   }
 
   String _getCurrentCourtImage() {
     if (_availableCourts.isEmpty) return widget.court.imageUrl;
-    try {
-      return _availableCourts
-          .firstWhere((c) => c.name == _selectedField)
-          .imageUrl;
-    } catch (e) {
-      return widget.court.imageUrl;
-    }
+    final selected = _availableCourts.firstWhere(
+      (c) => c.name == _selectedField,
+      orElse: () => widget.court,
+    );
+    return selected.imageUrl;
   }
 
   bool get _isFormValid =>
@@ -102,14 +120,13 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bookingProvider = Provider.of<BookingProvider>(context);
     const primaryBlue = Color(0xFF093FB4);
     const accentGreen = Color(0xFF00C853);
 
     // LOGIKA PEMOTONGAN NAMA UNTUK TAMPILAN
     // Jika _selectedField ada, potong stringnya. Jika tidak, pakai data awal.
-    String displayVenueName = _selectedField != null
-        ? _selectedField!.split(' - ')[0].trim()
-        : widget.court.name.split(' - ')[0].trim();
+    String displayVenueName = widget.court.name;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -199,20 +216,12 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
                     "Pilih Jadwal Lapangan",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 5),
-
-                  // Tampilkan HANYA Nama Venue (Misal: "Kelapa Gading")
                   Text(
                     displayVenueName,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey,
-                    ),
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                   const SizedBox(height: 20),
 
-                  // Area Gambar & Dropdown
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -221,35 +230,13 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
                         child: SizedBox(
                           width: 140,
                           height: 100,
-                          child: Builder(
-                            builder: (context) {
-                              final imageUrl = _getCurrentCourtImage();
-                              if (imageUrl.isEmpty) {
-                                return Image.asset(
-                                  'assets/lapangan.png',
-                                  fit: BoxFit.cover,
-                                );
-                              }
-                              return Image.network(
-                                imageUrl,
-                                fit: BoxFit.cover,
-                                loadingBuilder:
-                                    (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
-                                      return const Center(
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      );
-                                    },
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Image.asset(
-                                    'assets/lapangan.png',
-                                    fit: BoxFit.cover,
-                                  );
-                                },
-                              );
-                            },
+                          child: Image.network(
+                            _getCurrentCourtImage(),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, e, s) => Image.asset(
+                              'assets/lapangan.png',
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                       ),
@@ -260,9 +247,16 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
                       Expanded(
                         child: Column(
                           children: [
-                            // Dropdown Pilih Lapangan
+                            // DROPDOWN PILIH LAPANGAN
                             _isLoadingCourts
-                                ? const LinearProgressIndicator()
+                                ? const SizedBox(
+                                    height: 45,
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  )
                                 : _buildDropdown(
                                     "Pilih Lapangan",
                                     _fieldNames,
@@ -271,7 +265,6 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
                                       setState(() => _selectedField = val);
                                     },
                                   ),
-
                             const SizedBox(height: 10),
 
                             // Dropdown Pilih Waktu
@@ -288,13 +281,11 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
                   ),
 
                   const SizedBox(height: 30),
-
-                  // KALENDER DINAMIS
                   _buildDynamicCalendar(),
-
                   const SizedBox(height: 30),
 
                   // Tombol Booking
+                  // Cari bagian Align di dalam widget build kamu, lalu ganti isinya:
                   Align(
                     alignment: Alignment.centerRight,
                     child: SizedBox(
@@ -311,14 +302,25 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
                           ),
                           elevation: _isFormValid ? 2 : 0,
                         ),
-                        onPressed: _isFormValid ? _processBooking : null,
-                        child: const Text(
-                          "Booking Sekarang",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        onPressed: _isFormValid && !bookingProvider.isLoading
+                            ? _processBooking
+                            : null,
+                        child: bookingProvider.isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                "Booking Sekarang",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
                   ),
@@ -332,8 +334,25 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
     );
   }
 
-  // Fungsi Proses Booking
-  void _processBooking() {
+  void _processBooking() async {
+    final bookingProvider = Provider.of<BookingProvider>(
+      context,
+      listen: false,
+    );
+
+    // Ambil ID User yang asli dari SharedPreferences
+    String currentUserId = await _getLoggedInUserId();
+
+    if (currentUserId == "0") {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Sesi login berakhir. Silakan login ulang."),
+        ),
+      );
+      return;
+    }
+
+    // Cari objek lapangan yang dipilih di dropdown
     Court selectedCourtObj = widget.court;
     if (_availableCourts.isNotEmpty) {
       try {
@@ -343,25 +362,47 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
       } catch (_) {}
     }
 
-    double total = selectedCourtObj.pricePerHour * 1;
-    // Format tanggal ke String YYYY-MM-DD
-    String formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PaymentScreen(
-          bookingId:
-              "BOOK-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}",
-          court: selectedCourtObj,
-          date: formattedDate,
-          time: _selectedTime!,
-          totalPrice: total,
-        ),
-      ),
+    // Kirim data ke Provider
+    bool success = await bookingProvider.createBooking(
+      userId: currentUserId, // Gunakan ID asli, bukan "1"
+      courtId: selectedCourtObj.id,
+      date: _selectedDate!,
+      time: _selectedTime!,
+      duration: 1,
+      pricePerHour: selectedCourtObj.pricePerHour,
     );
+
+    if (success && mounted) {
+      double total = selectedCourtObj.pricePerHour * 1;
+      String formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PaymentScreen(
+            // Generate Booking ID yang lebih rapi
+            bookingId:
+                "BK-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}",
+            court: selectedCourtObj,
+            date: formattedDate,
+            time: _selectedTime!,
+            totalPrice: total,
+          ),
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Gagal booking. Cek koneksi atau ketersediaan lapangan.",
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
+  // 3. Cek apakah berhasil simpan di MySQL
   // Widget Dropdown
   Widget _buildDropdown(
     String hint,

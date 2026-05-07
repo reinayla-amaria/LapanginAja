@@ -27,22 +27,29 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadData();
   }
 
+  // Update di bagian _loadData()
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('user_id');
-    final name = prefs.getString('user_name');
+    final String? userId = prefs.getString(
+      'user_id',
+    ); // Ambil ID yang tadi disimpan
+    final String? name = prefs.getString('user_name');
 
     if (mounted) {
       setState(() => _userName = name);
-      // Fetch Courts Data
-      Provider.of<BookingProvider>(context, listen: false).fetchCourts();
 
-      // Fetch User Bookings if logged in
-      if (userId != null) {
-        Provider.of<BookingProvider>(
-          context,
-          listen: false,
-        ).fetchBookings(userId);
+      // Ambil Provider
+      final bookingProv = Provider.of<BookingProvider>(context, listen: false);
+
+      // Load Lapangan
+      bookingProv.fetchCourts();
+
+      // --- FIX: Ambil Booking hanya jika ID ada ---
+      if (userId != null && userId.isNotEmpty) {
+        debugPrint("Loading bookings for User ID: $userId");
+        bookingProv.fetchBookings(userId);
+      } else {
+        debugPrint("User ID tidak ditemukan di SharedPreferences");
       }
     }
   }

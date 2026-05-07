@@ -67,7 +67,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Login Manual
   Future<Map<String, dynamic>> login(String email, String password) async {
     _isLoading = true;
     notifyListeners();
@@ -83,20 +82,22 @@ class AuthProvider with ChangeNotifier {
 
       if (result['status'] == 'success' || result['token'] != null) {
         _token = result['token'];
-        // Mengambil data user secara dinamis dari response API
         _userName = result['user'] != null ? result['user']['name'] : 'User';
         _userEmail = result['user'] != null ? result['user']['email'] : email;
+
+        // --- FIX: Ambil ID User dari database ---
+        String userId = result['user']['id'].toString();
         _isLoggedIn = true;
 
-        // Simpan ke memori HP
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('is_login', true);
         await prefs.setString('token', _token!);
         await prefs.setString('user_name', _userName!);
+        await prefs.setString('user_email', _userEmail!);
         await prefs.setString(
-          'user_email',
-          _userEmail!,
-        ); // Simpan email dinamis
+          'user_id',
+          userId,
+        ); // Simpan ID untuk filter booking
       }
 
       _isLoading = false;

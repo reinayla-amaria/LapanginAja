@@ -9,8 +9,6 @@ import 'screens/splash_screen.dart';
 void main() async {
   // 1. Pastikan binding Flutter sudah siap
   WidgetsFlutterBinding.ensureInitialized();
-
-  // 2. Inisialisasi format tanggal (lokal Indonesia)
   await initializeDateFormatting('id_ID', null);
 
   // 3. Ambil data login dari memori HP
