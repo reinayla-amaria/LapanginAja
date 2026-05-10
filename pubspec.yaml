@@ -30,6 +30,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  webview_flutter: ^4.4.2
   
 
   # The following adds the Cupertino Icons font to your application.
@@ -84,6 +85,7 @@ flutter:
     - assets/anime 1.png
     - assets/lapangan.png
     - assets/google_logo.png
+    - assets/sukses_screen.png
     
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

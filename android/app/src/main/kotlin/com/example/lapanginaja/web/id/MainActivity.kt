@@ -1,4 +1,4 @@
-package LapanginAja.com
+package lapanginaja.web.id
 
 import io.flutter.embedding.android.FlutterActivity
 

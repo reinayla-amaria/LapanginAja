@@ -91,34 +91,47 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // GOOGLE LOGIN
                 InkWell(
-                  onTap: () async {
-                    final user = await _authService.signIn();
-                    if (user != null) {
-                      final result = await authProvider.googleLogin(
-                        name: user.displayName ?? "",
-                        email: user.email,
-                        googleId: user.id,
-                      );
+                  // Menghindari double click saat proses sedang jalan
+                  onTap: authProvider.isLoading
+                      ? null
+                      : () async {
+                          // 1. Ambil user dari Google (lewat popup pilih akun)
+                          final user = await _authService.signIn();
 
-                      if (result['status'] == 'success') {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MainNavScreen(),
-                          ),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              result['message'] ?? 'Gagal login dengan Google',
-                            ),
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  child: Image.asset('assets/google_logo.png', width: 60),
+                          if (user != null) {
+                            // 2. Kirim data user tersebut ke Laravel lewat AuthProvider
+                            final result = await authProvider.googleLogin(
+                              name: user.displayName ?? "User Google",
+                              email: user.email,
+                              googleId: user.id,
+                            );
+
+                            if (mounted) {
+                              if (result['status'] == 'success') {
+                                // Berhasil! Pindah ke Dashboard
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const MainNavScreen(),
+                                  ),
+                                );
+                              } else {
+                                // Gagal! Kasih tau errornya (misal: koneksi atau server error)
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      result['message'] ??
+                                          'Gagal login dengan Google',
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        },
+                  child: authProvider.isLoading
+                      ? const CircularProgressIndicator() // Tampilkan loading saat proses
+                      : Image.asset('assets/google_logo.png', width: 60),
                 ),
                 const SizedBox(height: 20),
 

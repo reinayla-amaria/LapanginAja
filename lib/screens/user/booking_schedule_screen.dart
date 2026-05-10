@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:mysql1/mysql1.dart';
 import '../../models/court_model.dart';
 import 'payment_screen.dart';
-import '../../services/db_connection.dart';
 import 'package:provider/provider.dart';
 import '../../providers/booking_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../providers/auth_provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class BookingScheduleScreen extends StatefulWidget {
   final Court court;
+
   const BookingScheduleScreen({super.key, required this.court});
 
   @override
@@ -33,9 +35,8 @@ final List<String> timeList = [
 
 Future<String> _getLoggedInUserId() async {
   final prefs = await SharedPreferences.getInstance();
-  // Sesuaikan key-nya (misal 'user_id' atau 'userId') dengan saat kamu login
   final userId = prefs.getString('user_id');
-  return userId ?? "0"; // Jika null, kembalikan "0" sebagai tanda belum login
+  return userId ?? "0";
 }
 
 class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
@@ -51,7 +52,7 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
   @override
   void initState() {
     super.initState();
-    // REVISI: Jangan split nama di sini, karena court.name sekarang adalah nama Mitra
+
     _selectedField = null;
     _fetchSiblingCourts();
   }
@@ -61,47 +62,35 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
     setState(() => _isLoadingCourts = true);
 
     try {
-      final conn = await DBService.getConnection();
-
-      // REVISI: Gunakan ID Mitra untuk mencari semua lapangan di bawah gedung yang sama
-      // Asumsi: widget.court.id adalah ID yang unik untuk mitra tersebut
-      // Jika database kamu menggunakan relasi parent-child, sesuaikan query ini:
-      Results results = await conn.query(
-        "SELECT id, nama_lapangan, lokasi, harga_per_jam, foto FROM lapangans WHERE nama_lapangan LIKE ?",
-        [
-          '%${widget.court.name}%',
-        ], // Mencari yang namanya mengandung nama mitra
+      final response = await http.get(
+        Uri.parse('https://lapanginaja.web.id/api/lapangan'),
+        headers: {'Accept': 'application/json'},
       );
 
-      final List<Court> fetchedCourts = results.map((row) {
-        return Court(
-          id: row['id'].toString(),
-          name: row['nama_lapangan'] ?? '',
-          location: row['lokasi'] ?? '',
-          pricePerHour: double.tryParse(row['harga_per_jam'].toString()) ?? 0.0,
-          imageUrl: row['foto'] ?? '',
-          facilities: ["Parkir", "Toilet"],
-          description: "Lapangan olahraga berkualitas.",
-        );
-      }).toList();
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> result = jsonDecode(response.body);
+        final List<dynamic> allData = result['data'];
 
-      await conn.close();
+        final List<Court> fetchedCourts = allData
+            .where(
+              (json) => json['mitra_id'].toString() == widget.court.mitraId,
+            )
+            .map((json) => Court.fromJson(json))
+            .toList();
 
-      if (mounted) {
-        setState(() {
-          _availableCourts = fetchedCourts;
-          // Ambil nama lapangan (misal: "Lapangan 1", "Lapangan 2")
-          _fieldNames = fetchedCourts.map((c) => c.name).toList();
-          _isLoadingCourts = false;
+        debugPrint("Lapangan ditemukan: ${fetchedCourts.length}");
 
-          // Set default pilihan ke item pertama jika tersedia
-          if (_fieldNames.isNotEmpty) {
-            _selectedField = _fieldNames.first;
-          }
-        });
+        if (mounted) {
+          setState(() {
+            _availableCourts = fetchedCourts;
+            _fieldNames = fetchedCourts.map((c) => c.courtName).toList();
+            _isLoadingCourts = false;
+            _selectedField = _fieldNames.isNotEmpty ? _fieldNames.first : null;
+          });
+        }
       }
     } catch (e) {
-      debugPrint("Error fetching lapangans: $e");
+      debugPrint("Error: $e");
       if (mounted) setState(() => _isLoadingCourts = false);
     }
   }
@@ -121,6 +110,7 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     final bookingProvider = Provider.of<BookingProvider>(context);
+
     const primaryBlue = Color(0xFF093FB4);
     const accentGreen = Color(0xFF00C853);
 
@@ -335,24 +325,31 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
   }
 
   void _processBooking() async {
+    // 1. Ambil Provider
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final bookingProvider = Provider.of<BookingProvider>(
       context,
       listen: false,
     );
 
-    // Ambil ID User yang asli dari SharedPreferences
-    String currentUserId = await _getLoggedInUserId();
+    // 2. Ambil ID (Gunakan getter userId dari AuthProvider yang sudah kita buat tadi)
+    String? currentUserId = authProvider.userId;
 
-    if (currentUserId == "0") {
+    // 3. Validasi: Jika ID masih kosong, suruh login ulang
+    if (currentUserId == null ||
+        currentUserId == "0" ||
+        currentUserId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Sesi login berakhir. Silakan login ulang."),
+          backgroundColor: Colors.orange,
         ),
       );
       return;
     }
 
-    // Cari objek lapangan yang dipilih di dropdown
+    // 4. Cari objek lapangan
     Court selectedCourtObj = widget.court;
     if (_availableCourts.isNotEmpty) {
       try {
@@ -362,9 +359,9 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
       } catch (_) {}
     }
 
-    // Kirim data ke Provider
+    // 5. Jalankan Booking
     bool success = await bookingProvider.createBooking(
-      userId: currentUserId, // Gunakan ID asli, bukan "1"
+      userId: currentUserId,
       courtId: selectedCourtObj.id,
       date: _selectedDate!,
       time: _selectedTime!,
@@ -375,28 +372,20 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
     if (success && mounted) {
       double total = selectedCourtObj.pricePerHour * 1;
       String formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+      String snapToken = bookingProvider.lastSnapToken; // ← ambil snap token
 
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => PaymentScreen(
-            // Generate Booking ID yang lebih rapi
             bookingId:
                 "BK-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}",
             court: selectedCourtObj,
             date: formattedDate,
             time: _selectedTime!,
             totalPrice: total,
+            snapToken: snapToken, // ← kirim snap token
           ),
-        ),
-      );
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Gagal booking. Cek koneksi atau ketersediaan lapangan.",
-          ),
-          backgroundColor: Colors.red,
         ),
       );
     }

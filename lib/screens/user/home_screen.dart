@@ -61,17 +61,22 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Court> allCourts = bookingProv.courts;
 
     // --- SEARCH FILTER LOGIC ---
-    final Set<String> seenVenues = {};
     final List<Court> uniqueVenues = [];
+    final Set<String> seenVenues = {};
 
     for (var court in allCourts) {
-      String venueName = court.name.split(' - ')[0].trim();
+      // 1. Ambil Nama Gedung (sebelum tanda strip '-')
+      // Contoh: "GOR Jati - Lapangan 1" jadi "GOR Jati"
+      String venueName = court.name.contains(' - ')
+          ? court.name.split(' - ')[0].trim()
+          : court.name.trim();
 
-      // Check if venue name matches search query
+      // 2. Filter Search (Cari berdasarkan Nama Gedung)
       bool matchesSearch = venueName.toLowerCase().contains(
         _searchQuery.toLowerCase(),
       );
 
+      // 3. Masukkan ke list kalau BELUM PERNAH ADA di Set
       if (!seenVenues.contains(venueName) && matchesSearch) {
         seenVenues.add(venueName);
         uniqueVenues.add(court);
@@ -203,12 +208,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           )
                         : ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: uniqueVenues.length,
+                            scrollDirection: Axis
+                                .horizontal, // Tetap horizontal sesuai kemauanmu
+                            itemCount: uniqueVenues
+                                .length, // Pakai hasil filter di atas
                             itemBuilder: (context, index) {
                               return _buildHorizontalCourtCard(
                                 context,
-                                uniqueVenues[index],
+                                uniqueVenues[index], // Data yang dikirim adalah perwakilan 1 gedung
                                 primaryBlue,
                               );
                             },

@@ -2,18 +2,15 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiServices {
-  // Tambahkan 'api' di sini dan hapus slash di ujung biar rapi
-  static const String baseUrl = "http://157.10.253.206:8080/api";
+  static const String baseUrl = "https://lapanginaja.web.id/api";
 
-  // Fungsi Registrasi
+  // 1. Fungsi Registrasi (SUDAH OKE)
   Future<http.Response> register(
     String name,
     String email,
     String password,
   ) async {
-    // Tambahkan slash di awal endpoint
     final url = Uri.parse('$baseUrl/register');
-
     try {
       final response = await http.post(
         url,
@@ -25,8 +22,7 @@ class ApiServices {
           'name': name,
           'email': email,
           'password': password,
-          'password_confirmation':
-              password, // Biasanya Laravel minta konfirmasi password
+          'password_confirmation': password,
         }),
       );
       return response;
@@ -35,9 +31,9 @@ class ApiServices {
     }
   }
 
-  // Fungsi Login
+  // 2. Fungsi Login Manual (SUDAH OKE)
   Future<http.Response> login(String email, String password) async {
-    final url = Uri.parse('$baseUrl/login'); // Pakai baseUrl yang baru
+    final url = Uri.parse('$baseUrl/login');
     return await http.post(
       url,
       headers: {
@@ -46,5 +42,29 @@ class ApiServices {
       },
       body: jsonEncode({'email': email, 'password': password}),
     );
+  }
+
+  // 3. Fungsi Login Google (TAMBAHKAN INI)
+  Future<http.Response> googleLogin(
+    String name,
+    String email,
+    String googleId,
+  ) async {
+    final url = Uri.parse(
+      '$baseUrl/google-login',
+    ); // Sesuaikan endpoint di routes/api.php kamu
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({'name': name, 'email': email, 'google_id': googleId}),
+      );
+      return response;
+    } catch (e) {
+      rethrow;
+    }
   }
 }

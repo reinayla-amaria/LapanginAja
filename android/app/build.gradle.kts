@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "LapanginAja.com"
+    namespace = "lapanginaja.web.id"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,7 +20,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "LapanginAja.com"
+        applicationId = "lapanginaja.web.id"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

@@ -1,36 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'providers/booking_provider.dart';
 import 'providers/auth_provider.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
-  // 1. Pastikan binding Flutter sudah siap
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID', null);
 
-  // 3. Ambil data login dari memori HP
-  final prefs = await SharedPreferences.getInstance();
-  // Gunakan 'is_login' (sesuai yang kita set di AuthProvider sebelumnya)
-  bool isLoggedIn = prefs.getBool('is_login') ?? false;
+  final authProvider = AuthProvider();
+  bool isLoggedIn = await authProvider.checkLoginStatus();
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider.value(value: authProvider),
         ChangeNotifierProvider(create: (_) => BookingProvider()),
       ],
       child: MyApp(isLoggedIn: isLoggedIn),
     ),
   );
-}
+} 
 
 class MyApp extends StatelessWidget {
   final bool isLoggedIn;
-
-  // Constructor untuk menerima status login dari fungsi main
   const MyApp({super.key, required this.isLoggedIn});
 
   @override
@@ -56,7 +50,6 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      // Aplikasi dimulai dari SplashScreen
       home: SplashScreen(isLoggedIn: isLoggedIn),
     );
   }

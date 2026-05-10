@@ -4,12 +4,12 @@ class DBService {
   static Future<MySqlConnection> getConnection() async {
     return await MySqlConnection.connect(
       ConnectionSettings(
-        host: 'byiqomiqoan10dwxncid-mysql.services.clever-cloud.com', // PAKAI 10
+        host: '127.0.0.1', // <--- Pastikan ini sesuai hasil ipconfig terbaru
         port: 3306,
-        user: 'uwpggsleh944hpyo',
-        password: 'ayniqLbgmRsG2kDeO14t',
-        db: 'byiqomiqoan10dwxncid', // PAKAI 10
-        timeout: const Duration(seconds: 30),
+        user: 'root',
+        password: ' ', // Kosongkan sesuai settingan di HeidiSQL kamu
+        db: 'db_lapangan',
+        timeout: const Duration(seconds: 10),
       ),
     );
   }

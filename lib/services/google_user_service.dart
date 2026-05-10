@@ -2,7 +2,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class GoogleUserService {
-  final String baseUrl = "http://157.10.253.206:8080/api";
+  // 1. Tambahkan https:// dan sesuaikan jika ada prefix /api
+  final String baseUrl = "https://lapanginaja.web.id/api";
 
   Future<void> registerGoogleUser({
     required String name,
@@ -10,22 +11,38 @@ class GoogleUserService {
     required String googleId,
     String? photoUrl,
   }) async {
-    final url = Uri.parse('$baseUrl/register_google');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'name': name,
-        'email': email,
-        'google_id': googleId,
-        'photo_url': photoUrl ?? "",
-      }),
-    );
+    try {
+      final url = Uri.parse('$baseUrl/register_google');
 
-    if (response.statusCode == 200) {
-      print("User tersimpan di DB");
-    } else {
-      print("Gagal simpan user: ${response.body}");
+      final response = await http
+          .post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept':
+                  'application/json', // Tambahkan ini agar Laravel kirim error dalam bentuk JSON
+            },
+            body: jsonEncode({
+              'name': name,
+              'email': email,
+              'google_id': googleId,
+              'photo_url': photoUrl ?? "",
+            }),
+          )
+          .timeout(
+            const Duration(seconds: 10),
+          ); // Tambahkan timeout biar nggak nunggu selamanya
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print("✅ User tersimpan di DB");
+      } else {
+        // Ini akan membantu kamu melihat error dari Laravel (misal: validation error)
+        print("❌ Gagal simpan user. Status: ${response.statusCode}");
+        print("Pesan Server: ${response.body}");
+      }
+    } catch (e) {
+      // Menangkap error koneksi/internet
+      print("        Error Koneksi: $e");
     }
   }
 }

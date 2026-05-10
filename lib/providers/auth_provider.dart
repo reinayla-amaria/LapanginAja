@@ -6,36 +6,41 @@ import 'dart:convert';
 class AuthProvider with ChangeNotifier {
   bool _isLoading = false;
   bool _isLoggedIn = false;
+  String? _userId;
   String? _token;
   String? _userName;
-  String? _userEmail; // Tambahkan ini agar email bisa dipanggil di dashboard
+  String? _userEmail;
+  Map<String, dynamic>? _user;
 
   bool get isLoading => _isLoading;
   bool get isLoggedIn => _isLoggedIn;
   String? get token => _token;
+  String? get userId => _userId;
   String? get userName => _userName;
-  String? get userEmail => _userEmail; // Getter untuk email
+  String? get userEmail => _userEmail;
+  Map<String, dynamic>? get user => _user;
 
-  final String baseUrl = "http://157.10.253.206:8080/api";
+  // FIX: Base URL harus berhenti di /api
+  final String baseUrl = "https://lapanginaja.web.id/api";
 
   Map<String, String> get _headers => {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   };
 
-  // --- FUNGSI BARU: CEK STATUS SAAT APP DIBUKA ---
-  Future<void> checkLoginStatus() async {
+  Future<bool> checkLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
     _isLoggedIn = prefs.getBool('is_login') ?? false;
     if (_isLoggedIn) {
       _token = prefs.getString('token');
       _userName = prefs.getString('user_name');
       _userEmail = prefs.getString('user_email');
+      _userId = prefs.getString('user_id');
     }
     notifyListeners();
+    return _isLoggedIn;
   }
 
-  // Register
   Future<Map<String, dynamic>> register({
     required String name,
     required String email,
@@ -43,10 +48,9 @@ class AuthProvider with ChangeNotifier {
   }) async {
     _isLoading = true;
     notifyListeners();
-
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/register'),
+        Uri.parse('$baseUrl/register'), // Jadi: api/register (BENAR)
         headers: _headers,
         body: jsonEncode({
           'name': name,
@@ -55,7 +59,6 @@ class AuthProvider with ChangeNotifier {
           'password_confirmation': password,
         }),
       );
-
       final result = jsonDecode(response.body);
       _isLoading = false;
       notifyListeners();
@@ -70,23 +73,18 @@ class AuthProvider with ChangeNotifier {
   Future<Map<String, dynamic>> login(String email, String password) async {
     _isLoading = true;
     notifyListeners();
-
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/login'),
+        Uri.parse('$baseUrl/login'), // Jadi: api/login (BENAR)
         headers: _headers,
         body: jsonEncode({'email': email, 'password': password}),
       );
-
       final result = jsonDecode(response.body);
-
-      if (result['status'] == 'success' || result['token'] != null) {
+      if (response.statusCode == 200) {
         _token = result['token'];
-        _userName = result['user'] != null ? result['user']['name'] : 'User';
-        _userEmail = result['user'] != null ? result['user']['email'] : email;
-
-        // --- FIX: Ambil ID User dari database ---
-        String userId = result['user']['id'].toString();
+        _userName = result['user']['name'];
+        _userEmail = result['user']['email'];
+        _userId = result['user']['id'].toString();
         _isLoggedIn = true;
 
         final prefs = await SharedPreferences.getInstance();
@@ -94,12 +92,8 @@ class AuthProvider with ChangeNotifier {
         await prefs.setString('token', _token!);
         await prefs.setString('user_name', _userName!);
         await prefs.setString('user_email', _userEmail!);
-        await prefs.setString(
-          'user_id',
-          userId,
-        ); // Simpan ID untuk filter booking
+        await prefs.setString('user_id', _userId!);
       }
-
       _isLoading = false;
       notifyListeners();
       return result;
@@ -110,7 +104,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Google Login
   Future<Map<String, dynamic>> googleLogin({
     required String name,
     required String email,
@@ -118,46 +111,54 @@ class AuthProvider with ChangeNotifier {
   }) async {
     _isLoading = true;
     notifyListeners();
-
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/google-login'),
+        Uri.parse("$baseUrl/register_google"), // Jadi: api/google-login (BENAR)
         headers: _headers,
         body: jsonEncode({'name': name, 'email': email, 'google_id': googleId}),
       );
-      final result = jsonDecode(response.body);
 
-      if (result['status'] == 'success') {
-        _token = result['token'];
-        _userName = result['user']['name'];
-        _userEmail = result['user']['email'];
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        _token = data['access_token'];
+        _user = data['user'];
+        _userName = data['user']['name'];
+        _userEmail = data['user']['email'];
+        _userId = data['user']['id'].toString();
         _isLoggedIn = true;
 
-        final prefs = await SharedPreferences.getInstance();
+        // FIX: Simpan semua data agar auto-login jalan
+        SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setBool('is_login', true);
         await prefs.setString('token', _token!);
         await prefs.setString('user_name', _userName!);
         await prefs.setString('user_email', _userEmail!);
-      }
+        await prefs.setString('user_id', _userId!);
 
-      _isLoading = false;
-      notifyListeners();
-      return result;
+        _isLoading = false;
+        notifyListeners();
+        return {'status': 'success', 'message': data['message']};
+      } else {
+        _isLoading = false;
+        notifyListeners();
+        return {'status': 'error', 'message': data['message'] ?? 'Gagal login'};
+      }
     } catch (e) {
       _isLoading = false;
       notifyListeners();
-      return {'status': 'error', 'message': 'Koneksi gagal: $e'};
+      return {'status': 'error', 'message': 'Terjadi kesalahan koneksi'};
     }
   }
 
-  // Logout
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear(); // Hapus semua data di HP
+    await prefs.clear();
     _isLoggedIn = false;
     _token = null;
     _userName = null;
     _userEmail = null;
+    _userId = null;
+    _user = null;
     notifyListeners();
   }
 }

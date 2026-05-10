@@ -3,6 +3,12 @@ import 'package:mysql1/mysql1.dart';
 import '../models/court_model.dart';
 import '../models/booking_models.dart';
 import '../services/db_connection.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+const String baseUrl = "https://lapanginaja.web.id/api";
+String _lastSnapToken = '';
+String get lastSnapToken => _lastSnapToken;
 
 class BookingProvider with ChangeNotifier {
   List<Court> _courts = [];
@@ -17,56 +23,40 @@ class BookingProvider with ChangeNotifier {
   String _errorMessage = '';
   String get errorMessage => _errorMessage;
 
+  String _lastSnapToken = ''; // ← TAMBAH INI
+  String get lastSnapToken => _lastSnapToken; // ← TAMBAH INI
+
   // 1. FETCH DATA GEDUNG (MITRA) - VERSI FIX
   Future<void> fetchCourts() async {
     _isLoading = true;
+    _errorMessage = '';
+    _courts = [];
     notifyListeners();
 
     try {
-      final conn = await DBService.getConnection();
+      debugPrint("--- MEMULAI FETCH COURTS VIA API ---");
 
-      // Kita panggil kolomnya tanpa alias yang aneh-aneh
-      // Index: 0=u.id, 1=u.name, 2=l.lokasi, 3=harga, 4=foto
-      Results results = await conn.query("""
-      SELECT 
-        u.id, 
-        u.name, 
-        l.lokasi, 
-        MIN(l.harga_per_jam), 
-        l.foto 
-      FROM lapangans l
-      JOIN users u ON l.mitra_id = u.id
-      GROUP BY u.id, u.name, l.lokasi, l.foto
-      ORDER BY u.name ASC
-    """);
+      final response = await http.get(
+        Uri.parse('$baseUrl/lapangan'),
+        headers: {'Accept': 'application/json'},
+      );
 
-      _courts = results.map((row) {
-        // DEBUG: Ini akan memunculkan isi asli dari database di console log kamu
-        // Cek di Debug Console, apakah nama-nama itu muncul di sana?
-        print("ISI ROW ASLI: ${row.toList()}");
+      debugPrint("Status Code: ${response.statusCode}");
+      debugPrint("Response Body: ${response.body}");
 
-        return Court(
-          // Kita ambil data berdasarkan INDEX kolom (0, 1, 2, dst)
-          id: row[0].toString(),
-          name:
-              row[1]?.toString() ??
-              'Nama Tidak Terdeteksi', // row[1] adalah u.name
-          location:
-              row[2]?.toString() ??
-              'Lokasi tidak tersedia', // row[2] adalah l.lokasi
-          pricePerHour:
-              double.tryParse(row[3].toString()) ?? 0.0, // row[3] adalah harga
-          imageUrl: (row[4] != null && row[4].toString() != "NULL")
-              ? row[4].toString()
-              : 'https://via.placeholder.com/150',
-          facilities: ["Parkir", "Toilet"],
-          description: 'Pusat olahraga berkualitas.',
-        );
-      }).toList();
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> result = jsonDecode(response.body);
+        final List<dynamic> data = result['data'];
 
-      await conn.close();
+        _courts = data.map((json) => Court.fromJson(json)).toList();
+        debugPrint("Jumlah courts: ${_courts.length}");
+      } else {
+        _errorMessage = "Server error: ${response.statusCode}";
+        debugPrint("Server Error: ${response.statusCode} - ${response.body}");
+      }
     } catch (e) {
-      debugPrint("Error Fetch: $e");
+      _errorMessage = "Gagal mengambil data: $e";
+      debugPrint("!!! ERROR FETCH COURTS: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -113,6 +103,41 @@ class BookingProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+  // Di dalam class BookingProvider
+
+  List<Court> _subCourts = [];
+  List<Court> get subCourts =>
+      _subCourts; // Untuk menampung daftar lapangan milik 1 mitra
+
+  Future<void> fetchCourtsByMitra(String mitraId) async {
+    _isLoading = true;
+    _subCourts = []; // Bersihkan data lama agar tidak tertukar
+    notifyListeners();
+
+    try {
+      // Kita panggil API yang sama, karena Laravel sudah mengirim data lapangan beserta mitra_id-nya
+      final response = await http.get(Uri.parse('$baseUrl/lapangan'));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> result = jsonDecode(response.body);
+        final List<dynamic> allCourtsData = result['data'];
+
+        // Filter di sisi Flutter: Hanya ambil lapangan yang mitra_id-nya cocok
+        // Note: Pastikan di Laravel, API Lapangan kamu juga mengirim 'mitra_id'
+        _subCourts = allCourtsData
+            .where((json) => json['mitra_id'].toString() == mitraId)
+            .map((json) => Court.fromJson(json))
+            .toList();
+      } else {
+        debugPrint("Server Error: ${response.statusCode}");
+      }
+    } catch (e) {
+      debugPrint("Error Fetch SubCourts via API: $e");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
   // 3. CREATE BOOKING
   Future<bool> createBooking({
@@ -123,20 +148,49 @@ class BookingProvider with ChangeNotifier {
     required int duration,
     required double pricePerHour,
   }) async {
+    if (userId == "null" || userId.isEmpty) {
+      debugPrint("Error: User ID kosong!");
+      return false;
+    }
+
     try {
-      final conn = await DBService.getConnection();
-      double totalPrice = pricePerHour * duration;
+      // Hitung jam selesai
+      String jamMulai = time.split(' - ')[0].trim();
+      String jamSelesai = time.split(' - ')[1].trim();
+      double totalHarga = pricePerHour * duration;
       String formattedDate =
           "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
 
-      var result = await conn.query(
-        'INSERT INTO bookings (user_id, lapangan_id, tanggal_main, jam_mulai, total_harga, status) VALUES (?, ?, ?, ?, ?, ?)',
-        [userId, courtId, formattedDate, time, totalPrice, 'pending'],
+      final response = await http.post(
+        Uri.parse('$baseUrl/checkout'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'user_id': userId,
+          'lapangan_id': courtId,
+          'tanggal_main': formattedDate,
+          'jam_mulai': jamMulai,
+          'jam_selesai': jamSelesai,
+          'total_harga': totalHarga,
+        }),
       );
 
-      await conn.close();
-      return (result.affectedRows ?? 0) > 0;
+      debugPrint(
+        "Checkout response: ${response.statusCode} - ${response.body}",
+      );
+
+      if (response.statusCode == 200) {
+        final result = jsonDecode(response.body);
+        // Simpan snap_token untuk payment
+        _lastSnapToken = result['snap_token'] ?? '';
+        notifyListeners();
+        return true;
+      }
+      return false;
     } catch (e) {
+      debugPrint("Error createBooking: $e");
       return false;
     }
   }

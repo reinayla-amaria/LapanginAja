@@ -5,7 +5,6 @@ class GoogleAuthService {
     clientId:
         '456444985147-c4g2j2402jv9f0mb067v1qhl8k9klaem.apps.googleusercontent.com',
   );
-
   Future<GoogleSignInAccount?> signIn() async {
     try {
       final account = await _googleSignIn.signIn();
