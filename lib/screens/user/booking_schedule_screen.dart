@@ -374,6 +374,33 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
       String formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
       String snapToken = bookingProvider.lastSnapToken; // ← ambil snap token
 
+      if (success && mounted) {
+        // Tambah ini — refresh jadwal setelah booking berhasil
+        final prefs = await SharedPreferences.getInstance();
+        final userId = prefs.getString('user_id') ?? '';
+        if (userId.isNotEmpty) {
+          bookingProvider.fetchBookings(userId);
+        }
+
+        double total = selectedCourtObj.pricePerHour * 1;
+        String formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+        String snapToken = bookingProvider.lastSnapToken;
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PaymentScreen(
+              bookingId:
+                  "BK-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}",
+              court: selectedCourtObj,
+              date: formattedDate,
+              time: _selectedTime!,
+              totalPrice: total,
+              snapToken: snapToken,
+            ),
+          ),
+        );
+      }
       Navigator.push(
         context,
         MaterialPageRoute(

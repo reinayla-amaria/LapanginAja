@@ -54,7 +54,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   controller: _searchController,
                   onChanged: (v) => setState(() => _searchQuery = v),
                   decoration: InputDecoration(
-                    hintText: "Cari venue...",
+                    hintText: "Cari Arena Badminton...",
                     fillColor: Colors.white,
                     filled: true,
                     prefixIcon: const Icon(Icons.search),
@@ -101,8 +101,6 @@ class _BookingScreenState extends State<BookingScreen> {
   // --- WIDGET KARTU VENUE ---
 
   Widget _buildVenueCard(BuildContext context, Court court) {
-    // Bersihkan nama lapangan agar hanya nama Gedung
-
     String venueNameOnly = court.name;
 
     return Container(
