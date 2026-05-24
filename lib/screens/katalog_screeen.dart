@@ -43,28 +43,7 @@ class _KatalogScreenState extends State<KatalogScreen> {
       });
     }
   }
-onNavigationRequest: (request) {
-  final url = request.url;
-  debugPrint("Navigating to: $url");
-  
-  if (url.contains('lapanginaja.web.id/finish') || 
-      url.contains('example.com') ||  // ← tangkap example.com juga
-      url.contains('finish')) {
-    _showResultDialog('finish');
-    return NavigationDecision.prevent;
-  }
-  if (url.contains('lapanginaja.web.id/error') || 
-      url.contains('error')) {
-    _showResultDialog('error');
-    return NavigationDecision.prevent;
-  }
-  if (url.contains('lapanginaja.web.id/pending') || 
-      url.contains('pending')) {
-    _showResultDialog('pending');
-    return NavigationDecision.prevent;
-  }
-  return NavigationDecision.navigate;
-},
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiServices {
-  static const String baseUrl = "https://lapanginaja.web.id/api";
+  static const String baseUrl =
+      "https://backend-lapanginaja-production.up.railway.app/api";
 
   // 1. Fungsi Registrasi (SUDAH OKE)
   Future<http.Response> register(
