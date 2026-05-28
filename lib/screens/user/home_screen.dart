@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '../../screens/notification_screen.dart';
 import '../../providers/booking_provider.dart';
 import '../../models/court_model.dart';
-import '../../models/booking_models.dart'; // Ensure this matches your filename
+import '../../models/booking_models.dart';
 import 'court_detail_screen.dart';
+import '../../providers/notification_provider.dart';
+import '../../services/fcm_services.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,7 +19,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String? _userName;
 
-  // Search Variables
   String _searchQuery = "";
   final TextEditingController _searchController = TextEditingController();
 
@@ -25,26 +26,25 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadData();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FcmService.initialize(context);
+    });
   }
 
-  // Update di bagian _loadData()
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
-    final String? userId = prefs.getString(
-      'user_id',
-    ); // Ambil ID yang tadi disimpan
+    final String? userId = prefs.getString('user_id');
     final String? name = prefs.getString('user_name');
 
+    await prefs.remove('notifications');
     if (mounted) {
       setState(() => _userName = name);
 
-      // Ambil Provider
       final bookingProv = Provider.of<BookingProvider>(context, listen: false);
 
-      // Load Lapangan
       bookingProv.fetchCourts();
 
-      // --- FIX: Ambil Booking hanya jika ID ada ---
       if (userId != null && userId.isNotEmpty) {
         debugPrint("Loading bookings for User ID: $userId");
         bookingProv.fetchBookings(userId);
@@ -59,30 +59,24 @@ class _HomeScreenState extends State<HomeScreen> {
     final bookingProv = Provider.of<BookingProvider>(context);
     final List<Booking> myBookings = bookingProv.bookings;
     final List<Court> allCourts = bookingProv.courts;
-
-    // --- SEARCH FILTER LOGIC ---
+    final notifProv = Provider.of<NotificationProvider>(context);
     final List<Court> uniqueVenues = [];
     final Set<String> seenVenues = {};
 
     for (var court in allCourts) {
-      // 1. Ambil Nama Gedung (sebelum tanda strip '-')
-      // Contoh: "GOR Jati - Lapangan 1" jadi "GOR Jati"
       String venueName = court.name.contains(' - ')
           ? court.name.split(' - ')[0].trim()
           : court.name.trim();
 
-      // 2. Filter Search (Cari berdasarkan Nama Gedung)
       bool matchesSearch = venueName.toLowerCase().contains(
         _searchQuery.toLowerCase(),
       );
 
-      // 3. Masukkan ke list kalau BELUM PERNAH ADA di Set
       if (!seenVenues.contains(venueName) && matchesSearch) {
         seenVenues.add(venueName);
         uniqueVenues.add(court);
       }
     }
-    // ----------------------------
 
     const primaryBlue = Color(0xFF093FB4);
 
@@ -90,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: const Color(0xFFF5F5F5),
       body: Column(
         children: [
-          // 1. HEADER (Logo, Profile, Search)
+          // 1. HEADER
           Container(
             padding: const EdgeInsets.only(
               top: 50,
@@ -110,31 +104,89 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // LOGO ONLY (Text Removed)
+                    // LOGO
                     Image.asset('assets/logo_white.png', height: 40),
 
-                    // PROFILE PICTURE
-                    GestureDetector(
-                      onTap: () {
-                        // Navigate to profile page logic here
-                        print("Profile clicked");
-                      },
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                          image: const DecorationImage(
-                            // Ensure this filename matches your asset exactly
-                            image: AssetImage('assets/anime 1.png'),
-                            fit: BoxFit.cover,
+                    // NOTIF + PROFILE
+                    Row(
+                      children: [
+                        // NOTIFICATION BUTTON
+                        Stack(
+                          children: [
+                            IconButton(
+                              onPressed: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const NotificationScreen(),
+                                  ),
+                                );
+                                // Refresh badge setelah balik dari halaman notif
+                                if (context.mounted) {
+                                  Provider.of<NotificationProvider>(
+                                    context,
+                                    listen: false,
+                                  ).loadNotifications();
+                                }
+                              },
+                              icon: const Icon(
+                                Icons.notifications_none,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                            // Badge hanya muncul kalau ada notif belum dibaca
+                            if (notifProv.unreadCount > 0)
+                              Positioned(
+                                right: 8,
+                                top: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    notifProv.unreadCount > 9
+                                        ? '9+'
+                                        : '${notifProv.unreadCount}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+
+                        const SizedBox(width: 8),
+
+                        // PROFILE PICTURE
+                        GestureDetector(
+                          onTap: () {
+                            print("Profile clicked");
+                          },
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                              image: const DecorationImage(
+                                image: AssetImage('assets/anime 1.png'),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
+                      ],
+                    ), // end Row (notif + profile)
                   ],
-                ),
+                ), // end Row (logo + icons)
+
                 const SizedBox(height: 20),
 
                 // SEARCH BAR
@@ -174,9 +226,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ],
-            ),
-          ),
-
+            ), // end Column (header content)
+          ), // end Container (header)
           // 2. SCROLLABLE CONTENT
           Expanded(
             child: SingleChildScrollView(
@@ -184,13 +235,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Hide banner when searching to focus on results
                   if (_searchQuery.isEmpty) ...[
                     _buildPromoBanner(),
                     const SizedBox(height: 25),
                   ],
 
-                  // --- SECTION 1: NEARBY COURTS ---
+                  // SECTION 1: DAFTAR LAPANGAN
                   const Text(
                     "Daftar Lapangan",
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -208,25 +258,21 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           )
                         : ListView.builder(
-                            scrollDirection: Axis
-                                .horizontal, // Tetap horizontal sesuai kemauanmu
-                            itemCount: uniqueVenues
-                                .length, // Pakai hasil filter di atas
+                            scrollDirection: Axis.horizontal,
+                            itemCount: uniqueVenues.length,
                             itemBuilder: (context, index) {
                               return _buildHorizontalCourtCard(
                                 context,
-                                uniqueVenues[index], // Data yang dikirim adalah perwakilan 1 gedung
+                                uniqueVenues[index],
                                 primaryBlue,
                               );
                             },
                           ),
                   ),
 
-                  // Hide schedule when searching
+                  // SECTION 2: JADWAL KAMU
                   if (_searchQuery.isEmpty) ...[
                     const SizedBox(height: 25),
-
-                    // --- SECTION 2: YOUR SCHEDULE ---
                     const Text(
                       "Jadwal Kamu",
                       style: TextStyle(
@@ -235,7 +281,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-
                     if (myBookings.isEmpty)
                       Container(
                         width: double.infinity,
@@ -261,13 +306,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-          ),
+          ), // end Expanded
         ],
       ),
     );
   }
 
-  // --- WIDGET HELPER: Court Card with Image Fallback ---
+  // --- WIDGET HELPER: Court Card ---
   Widget _buildHorizontalCourtCard(
     BuildContext context,
     Court court,
@@ -329,7 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // IMAGE CONTAINER WITH FALLBACK
+          // IMAGE
           Expanded(
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 12),
@@ -343,7 +388,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   court.imageUrl,
                   fit: BoxFit.cover,
                   width: double.infinity,
-                  // Loading Indicator
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;
                     return const Center(
@@ -354,10 +398,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     );
                   },
-                  // Fallback Image on Error
                   errorBuilder: (context, error, stackTrace) {
                     return Image.asset(
-                      'assets/lapangan.png', // Make sure this asset exists
+                      'assets/lapangan.png',
                       fit: BoxFit.cover,
                       width: double.infinity,
                     );
@@ -499,11 +542,7 @@ class _HomeScreenState extends State<HomeScreen> {
           SizedBox(
             width: 80,
             height: 100,
-            // Updated to use asset image instead of icon
-            child: Image.asset(
-              'assets/anime 1.png', // Ensure this matches your asset name
-              fit: BoxFit.contain,
-            ),
+            child: Image.asset('assets/anime 1.png', fit: BoxFit.contain),
           ),
           const SizedBox(width: 12),
           Expanded(
