@@ -112,7 +112,7 @@ class FcmService {
       jamMulai: data['jam_mulai'] ?? '',
       jamSelesai: data['jam_selesai'] ?? '',
       totalHarga: data['total_harga'] ?? '',
-      userName: data['user_name'] ?? '',
+      userName: data['name'] ?? '',
       metodePembayaran: data['metode_pembayaran'] ?? '',
       transactionId: data['transaction_id'] ?? '',
     );
@@ -146,7 +146,7 @@ class FcmService {
       jamMulai: data['jam_mulai'] ?? '',
       jamSelesai: data['jam_selesai'] ?? '',
       totalHarga: data['total_harga'] ?? '',
-      userName: data['user_name'] ?? '',
+      userName: data['name'] ?? '',
       metodePembayaran: data['metode_pembayaran'] ?? '',
       transactionId: data['transaction_id'] ?? '',
     );
@@ -161,24 +161,26 @@ class FcmService {
     final List list = jsonDecode(pending);
     final notifProv = Provider.of<NotificationProvider>(context, listen: false);
 
-    for (final data in list) {
+    for (final item in list) {
+      // Pastikan item adalah Map
+      final data = Map<String, dynamic>.from(item);
+
       if (data['type'] == 'booking_success') {
         await notifProv.addBookingNotification(
-          bookingId: data['booking_id'] ?? '',
-          namaLapangan: data['nama_lapangan'] ?? '',
-          lokasi: data['lokasi'] ?? '',
-          tanggalMain: data['tanggal_main'] ?? '',
-          jamMulai: data['jam_mulai'] ?? '',
-          jamSelesai: data['jam_selesai'] ?? '',
-          totalHarga: data['total_harga'] ?? '',
-          userName: data['user_name'] ?? '',
-          metodePembayaran: data['metode_pembayaran'] ?? '',
-          transactionId: data['transaction_id'] ?? '',
+          bookingId: data['booking_id']?.toString() ?? '',
+          namaLapangan: data['nama_lapangan']?.toString() ?? '',
+          lokasi: data['lokasi']?.toString() ?? '',
+          tanggalMain: data['tanggal_main']?.toString() ?? '',
+          jamMulai: data['jam_mulai']?.toString() ?? '',
+          jamSelesai: data['jam_selesai']?.toString() ?? '',
+          totalHarga: data['total_harga']?.toString() ?? '',
+          // AMBIL DARI 'name' SESUAI FCM
+          userName: data['name']?.toString() ?? 'Penyewa',
+          metodePembayaran: data['metode_pembayaran']?.toString() ?? 'Midtrans',
+          transactionId: data['transaction_id']?.toString() ?? '-',
         );
       }
     }
-
-    // Hapus pending setelah diproses
     await prefs.remove('pending_fcm_notif');
   }
 }

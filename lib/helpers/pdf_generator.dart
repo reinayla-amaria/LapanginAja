@@ -22,12 +22,35 @@ class PdfGenerator {
     }
   }
 
-  /// Generate PDF bukti booking dan langsung buka
   static Future<void> generateAndOpenBookingPdf(
     BuildContext context,
     NotificationModel notif,
   ) async {
     try {
+      // Loading indicator
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text('Membuat PDF...'),
+              ],
+            ),
+            duration: Duration(seconds: 2),
+            backgroundColor: Color(0xFF093FB4),
+          ),
+        );
+      }
+
       final pdf = pw.Document();
 
       pdf.addPage(
@@ -93,7 +116,7 @@ class PdfGenerator {
                     ),
                   ),
                   child: pw.Text(
-                    '✓  PEMBAYARAN SUKSES',
+                    'PEMBAYARAN SUKSES',
                     style: pw.TextStyle(
                       color: PdfColor.fromHex('#2E7D32'),
                       fontWeight: pw.FontWeight.bold,
@@ -103,8 +126,6 @@ class PdfGenerator {
                 ),
 
                 pw.SizedBox(height: 24),
-
-                // ---- DETAIL LAPANGAN ----
                 _sectionTitle('Detail Lapangan'),
                 pw.SizedBox(height: 8),
                 _buildRow('Nama Lapangan', notif.namaLapangan),
@@ -116,18 +137,22 @@ class PdfGenerator {
                 ),
 
                 pw.SizedBox(height: 20),
-
-                // ---- DETAIL PENYEWA ----
                 _sectionTitle('Detail Penyewa'),
                 pw.SizedBox(height: 8),
-                _buildRow('Nama Penyewa', notif.userName),
+                _buildRow(
+                  'Nama Penyewa',
+                  notif.userName.isNotEmpty ? notif.userName : '-',
+                ),
 
                 pw.SizedBox(height: 20),
-
-                // ---- DETAIL PEMBAYARAN ----
                 _sectionTitle('Detail Pembayaran'),
                 pw.SizedBox(height: 8),
-                _buildRow('Metode Bayar', notif.metodePembayaran),
+                _buildRow(
+                  'Metode Bayar',
+                  notif.metodePembayaran.isNotEmpty
+                      ? notif.metodePembayaran
+                      : '-',
+                ),
                 _buildRow('Jumlah Bayar', _formatRupiah(notif.totalHarga)),
 
                 pw.SizedBox(height: 24),
@@ -167,8 +192,6 @@ class PdfGenerator {
                 ),
 
                 pw.Spacer(),
-
-                // ---- FOOTER ----
                 pw.Divider(color: PdfColors.grey300),
                 pw.SizedBox(height: 6),
                 pw.Center(
@@ -186,18 +209,40 @@ class PdfGenerator {
         ),
       );
 
-      // Simpan ke Documents
-      final directory = await getApplicationDocumentsDirectory();
+      // Simpan ke external storage (Downloads) supaya mudah diakses
+      Directory? directory;
+      if (Platform.isAndroid) {
+        directory = Directory('/storage/emulated/0/Download');
+        if (!await directory.exists()) {
+          directory = await getApplicationDocumentsDirectory();
+        }
+      } else {
+        directory = await getApplicationDocumentsDirectory();
+      }
+
       final filePath = '${directory.path}/bukti_booking_${notif.bookingId}.pdf';
       final file = File(filePath);
       await file.writeAsBytes(await pdf.save());
 
-      await OpenFile.open(filePath);
+      final result = await OpenFile.open(filePath);
+
+      if (result.type != ResultType.done && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF disimpan di: $filePath'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal membuat PDF: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuat PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }

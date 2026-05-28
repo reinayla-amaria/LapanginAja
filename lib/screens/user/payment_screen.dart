@@ -43,26 +43,26 @@ class _PaymentScreenState extends State<PaymentScreen> {
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onPageFinished: (_) {
+          onPageStarted: (url) {
+            debugPrint("=== PAGE STARTED: $url ===");
+          },
+          onPageFinished: (url) {
+            debugPrint("=== PAGE FINISHED: $url ===");
             setState(() => _isLoading = false);
           },
           onNavigationRequest: (request) {
             final url = request.url;
-            debugPrint("Navigating to: $url");
+            debugPrint("=== NAV REQUEST: $url ===");
+            if (url.contains('example.com') || url.contains('finish')) {
+              _handlePaymentSuccess();
 
-            if (url.contains('lapanginaja.web.id/finish') ||
-                url.contains('example.com') ||
-                url.contains('finish')) {
-              _handlePaymentSuccess(); // Ganti jadi function baru
               return NavigationDecision.prevent;
             }
-            if (url.contains('lapanginaja.web.id/error') ||
-                url.contains('error')) {
+            if (url.contains('error')) {
               _showResultDialog('error');
               return NavigationDecision.prevent;
             }
-            if (url.contains('lapanginaja.web.id/pending') ||
-                url.contains('pending')) {
+            if (url.contains('pending')) {
               _showResultDialog('pending');
               return NavigationDecision.prevent;
             }
@@ -88,8 +88,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token') ?? '';
-
+      final token = prefs.getString('token') ?? '';
+      debugPrint('TOKEN: $token');
+      debugPrint('BOOKING ID: ${widget.bookingId}');
       final response = await http.get(
         Uri.parse(
           'https://lapanginaja.web.id/api/booking/${widget.bookingId}/detail',
@@ -101,6 +102,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
       );
       debugPrint("STATUS CODE: ${response.statusCode}");
       debugPrint("BODY: ${response.body}");
+      debugPrint("BOOKING ID yang dipakai: ${widget.bookingId}");
+
       if (response.statusCode == 200) {
         debugPrint(response.body);
 
@@ -121,11 +124,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
             listen: false,
           ).addBookingNotification(
             bookingId: booking['id'].toString(),
-            namaLapangan: lapangan['nama_lapangan'],
+            namaLapangan:
+                (lapangan['mitra']?['name'] ?? '') +
+                ' - ' +
+                (lapangan['nama_lapangan'] ?? ''),
             lokasi: lapangan['lokasi'],
             tanggalMain: booking['tanggal_main'],
-            jamMulai: booking['jam_mulai'],
-            jamSelesai: booking['jam_selesai'],
+            jamMulai: booking['jam_mulai'].toString().substring(0, 5),
+            jamSelesai: booking['jam_selesai'].toString().substring(0, 5),
             totalHarga: booking['total_harga'].toString(),
             userName: user?['name']?.toString() ?? '-',
             metodePembayaran:

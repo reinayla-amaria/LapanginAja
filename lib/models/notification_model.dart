@@ -46,7 +46,7 @@ class NotificationModel {
       id: map['id'] ?? '',
       title: map['title'] ?? '',
       message: map['message'] ?? '',
-      createdAt: DateTime.parse(map['createdAt']),
+      createdAt: DateTime.tryParse(map['createdAt'] ?? '') ?? DateTime.now(),
       isRead: map['isRead'] ?? false,
       bookingId: map['bookingId'] ?? '',
       tanggalMain: map['tanggalMain'] ?? '',
@@ -55,9 +55,11 @@ class NotificationModel {
       totalHarga: map['totalHarga'] ?? '',
       namaLapangan: map['namaLapangan'] ?? '',
       lokasi: map['lokasi'] ?? '',
-      userName: map['userName'] ?? '',
-      metodePembayaran: map['metodePembayaran'] ?? '',
-      transactionId: map['transactionId'] ?? '',
+      // Gunakan 'userName' yang sudah disave di Provider,
+      // tapi pastikan saat pertama kali save tidak kosong
+      userName: map['userName'] ?? 'Penyewa',
+      metodePembayaran: map['metodePembayaran'] ?? 'Midtrans',
+      transactionId: map['transactionId'] ?? '-',
     );
   }
 

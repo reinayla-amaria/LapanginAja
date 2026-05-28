@@ -23,6 +23,9 @@ class BookingProvider with ChangeNotifier {
   String _lastSnapToken = '';
   String get lastSnapToken => _lastSnapToken;
 
+  String _lastBookingId = '';
+  String get lastBookingId => _lastBookingId;
+
   // 1. FETCH DATA LAPANGAN
   Future<void> fetchCourts() async {
     _isLoading = true;
@@ -129,6 +132,7 @@ class BookingProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
         _lastSnapToken = result['snap_token'] ?? '';
+        _lastBookingId = result['booking_id']?.toString() ?? ''; // tambah ini
         notifyListeners();
         return true;
       }

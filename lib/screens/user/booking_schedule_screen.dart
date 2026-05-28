@@ -30,14 +30,8 @@ final List<String> timeList = [
   "17:00 - 18:00",
   "19:00 - 20:00",
   "20:00 - 21:00",
-  "21:00 - 22:00",  
+  "21:00 - 22:00",
 ];
-
-Future<String> _getLoggedInUserId() async {
-  final prefs = await SharedPreferences.getInstance();
-  final userId = prefs.getString('user_id');
-  return userId ?? "0";
-}
 
 class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
   String? _selectedField;
@@ -52,7 +46,6 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
   @override
   void initState() {
     super.initState();
-
     _selectedField = null;
     _fetchSiblingCourts();
   }
@@ -77,8 +70,6 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
             )
             .map((json) => Court.fromJson(json))
             .toList();
-
-        debugPrint("Lapangan ditemukan: ${fetchedCourts.length}");
 
         if (mounted) {
           setState(() {
@@ -110,19 +101,15 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     final bookingProvider = Provider.of<BookingProvider>(context);
-
     const primaryBlue = Color(0xFF093FB4);
     const accentGreen = Color(0xFF00C853);
-
-    // LOGIKA PEMOTONGAN NAMA UNTUK TAMPILAN
-    // Jika _selectedField ada, potong stringnya. Jika tidak, pakai data awal.
     String displayVenueName = widget.court.name;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // 1. HEADER (Logo Only)
+          // 1. HEADER
           Container(
             padding: const EdgeInsets.only(
               top: 50,
@@ -141,7 +128,6 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
               children: [
                 Row(
                   children: [
-                    // Tombol Back
                     Container(
                       width: 40,
                       height: 40,
@@ -155,21 +141,15 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
                         padding: EdgeInsets.zero,
                       ),
                     ),
-
-                    // Logo di Tengah
                     Expanded(
                       child: Center(
                         child: Image.asset('assets/logo_white.png', height: 40),
                       ),
                     ),
-
-                    const SizedBox(width: 40), // Spacer penyeimbang
+                    const SizedBox(width: 40),
                   ],
                 ),
-
                 const SizedBox(height: 25),
-
-                // Search Bar Hiasan
                 TextField(
                   readOnly: true,
                   decoration: InputDecoration(
@@ -230,14 +210,10 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
                           ),
                         ),
                       ),
-
                       const SizedBox(width: 16),
-
-                      // Dropdown Area
                       Expanded(
                         child: Column(
                           children: [
-                            // DROPDOWN PILIH LAPANGAN
                             _isLoadingCourts
                                 ? const SizedBox(
                                     height: 45,
@@ -251,13 +227,10 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
                                     "Pilih Lapangan",
                                     _fieldNames,
                                     _selectedField,
-                                    (val) {
-                                      setState(() => _selectedField = val);
-                                    },
+                                    (val) =>
+                                        setState(() => _selectedField = val),
                                   ),
                             const SizedBox(height: 10),
-
-                            // Dropdown Pilih Waktu
                             _buildDropdown(
                               "Pilih Waktu",
                               timeList,
@@ -274,44 +247,39 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
                   _buildDynamicCalendar(),
                   const SizedBox(height: 30),
 
-                  // Tombol Booking
-                  // Cari bagian Align di dalam widget build kamu, lalu ganti isinya:
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _isFormValid
-                              ? accentGreen
-                              : Colors.grey[400],
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: _isFormValid ? 2 : 0,
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _isFormValid
+                            ? accentGreen
+                            : Colors.grey[400],
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        onPressed: _isFormValid && !bookingProvider.isLoading
-                            ? _processBooking
-                            : null,
-                        child: bookingProvider.isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Text(
-                                "Booking Sekarang",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                        elevation: _isFormValid ? 2 : 0,
                       ),
+                      onPressed: _isFormValid && !bookingProvider.isLoading
+                          ? _processBooking
+                          : null,
+                      child: bookingProvider.isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              "Booking Sekarang",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -324,19 +292,18 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
     );
   }
 
+  // -------------------------------------------------------
+  // PROCESS BOOKING
+  // -------------------------------------------------------
   void _processBooking() async {
-    // 1. Ambil Provider
-
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final bookingProvider = Provider.of<BookingProvider>(
       context,
       listen: false,
     );
 
-    // 2. Ambil ID (Gunakan getter userId dari AuthProvider yang sudah kita buat tadi)
     String? currentUserId = authProvider.userId;
 
-    // 3. Validasi: Jika ID masih kosong, suruh login ulang
     if (currentUserId == null ||
         currentUserId == "0" ||
         currentUserId.isEmpty) {
@@ -349,7 +316,6 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
       return;
     }
 
-    // 4. Cari objek lapangan
     Court selectedCourtObj = widget.court;
     if (_availableCourts.isNotEmpty) {
       try {
@@ -359,7 +325,6 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
       } catch (_) {}
     }
 
-    // 5. Jalankan Booking
     bool success = await bookingProvider.createBooking(
       userId: currentUserId,
       courtId: selectedCourtObj.id,
@@ -370,56 +335,38 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
     );
 
     if (success && mounted) {
-      double total = selectedCourtObj.pricePerHour * 1;
-      String formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
-      String snapToken = bookingProvider.lastSnapToken; // ← ambil snap token
-
-      if (success && mounted) {
-        // Tambah ini — refresh jadwal setelah booking berhasil
-        final prefs = await SharedPreferences.getInstance();
-        final userId = prefs.getString('user_id') ?? '';
-        if (userId.isNotEmpty) {
-          bookingProvider.fetchBookings(userId);
-        }
-
-        double total = selectedCourtObj.pricePerHour * 1;
-        String formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
-        String snapToken = bookingProvider.lastSnapToken;
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PaymentScreen(
-              bookingId:
-                  "BK-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}",
-              court: selectedCourtObj,
-              date: formattedDate,
-              time: _selectedTime!,
-              totalPrice: total,
-              snapToken: snapToken,
-            ),
-          ),
-        );
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id') ?? '';
+      if (userId.isNotEmpty) {
+        bookingProvider.fetchBookings(userId);
       }
+
+      final double total = selectedCourtObj.pricePerHour * 1;
+      final String formattedDate = DateFormat(
+        'yyyy-MM-dd',
+      ).format(_selectedDate!);
+      final String snapToken = bookingProvider.lastSnapToken;
+      final String bookingId = bookingProvider.lastBookingId;
+
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => PaymentScreen(
-            bookingId:
-                "BK-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}",
+            bookingId: bookingId,
             court: selectedCourtObj,
             date: formattedDate,
             time: _selectedTime!,
             totalPrice: total,
-            snapToken: snapToken, // ← kirim snap token
+            snapToken: snapToken,
           ),
         ),
       );
     }
   }
 
-  // 3. Cek apakah berhasil simpan di MySQL
-  // Widget Dropdown
+  // -------------------------------------------------------
+  // WIDGET DROPDOWN
+  // -------------------------------------------------------
   Widget _buildDropdown(
     String hint,
     List<String> items,
@@ -463,7 +410,9 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
     );
   }
 
-  // Widget Kalender Dinamis
+  // -------------------------------------------------------
+  // WIDGET KALENDER
+  // -------------------------------------------------------
   Widget _buildDynamicCalendar() {
     final int year = _focusedMonth.year;
     final int month = _focusedMonth.month;
@@ -491,7 +440,6 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
       ),
       child: Column(
         children: [
-          // Header Bulan
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
             child: Row(
@@ -503,9 +451,7 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
                     if (_focusedMonth.isAfter(
                       DateTime(today.year, today.month),
                     )) {
-                      setState(() {
-                        _focusedMonth = DateTime(year, month - 1);
-                      });
+                      setState(() => _focusedMonth = DateTime(year, month - 1));
                     }
                   },
                 ),
@@ -518,18 +464,13 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.chevron_right),
-                  onPressed: () {
-                    setState(() {
-                      _focusedMonth = DateTime(year, month + 1);
-                    });
-                  },
+                  onPressed: () =>
+                      setState(() => _focusedMonth = DateTime(year, month + 1)),
                 ),
               ],
             ),
           ),
           const Divider(height: 1),
-
-          // Header Hari
           Row(
             children: dayHeaders
                 .map(
@@ -550,8 +491,6 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
                 )
                 .toList(),
           ),
-
-          // Grid Tanggal
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -562,7 +501,6 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
             ),
             itemBuilder: (context, index) {
               final date = calendarDays[index];
-
               if (date == null) return const SizedBox();
 
               bool isPastDate = date.isBefore(today);
@@ -575,11 +513,7 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
               return InkWell(
                 onTap: isPastDate
                     ? null
-                    : () {
-                        setState(() {
-                          _selectedDate = date;
-                        });
-                      },
+                    : () => setState(() => _selectedDate = date),
                 child: Container(
                   decoration: BoxDecoration(
                     color: isSelected ? Colors.blue[50] : null,
