@@ -14,9 +14,25 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   final GoogleAuthService _authService = GoogleAuthService();
+
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,10 +73,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 30),
 
+                // NAMA LENGKAP
                 TextFormField(
                   controller: _nameController,
                   decoration: InputDecoration(
                     hintText: "Nama Lengkap",
+                    prefixIcon: const Icon(Icons.person_outline),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -69,10 +87,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
 
+                // USERNAME
+                TextFormField(
+                  controller: _usernameController,
+                  decoration: InputDecoration(
+                    hintText: "Username",
+                    prefixIcon: const Icon(Icons.alternate_email),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  validator: (val) {
+                    if (val == null || val.isEmpty)
+                      return "Username wajib diisi";
+                    if (val.length < 3) return "Username minimal 3 karakter";
+                    if (val.contains(' '))
+                      return "Username tidak boleh mengandung spasi";
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // EMAIL
                 TextFormField(
                   controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
                     hintText: "Email",
+                    prefixIcon: const Icon(Icons.email_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -85,17 +127,66 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
 
+                // PASSWORD
                 TextFormField(
                   controller: _passwordController,
-                  obscureText: true,
+                  obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     hintText: "Password",
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  validator: (val) =>
-                      val!.length < 8 ? "Minimal 8 karakter" : null,
+                  validator: (val) {
+                    if (val == null || val.isEmpty)
+                      return "Password wajib diisi";
+                    if (val.length < 8) return "Minimal 8 karakter";
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // KONFIRMASI PASSWORD
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: _obscureConfirmPassword,
+                  decoration: InputDecoration(
+                    hintText: "Konfirmasi Password",
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirmPassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () => setState(
+                        () =>
+                            _obscureConfirmPassword = !_obscureConfirmPassword,
+                      ),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  validator: (val) {
+                    if (val == null || val.isEmpty)
+                      return "Konfirmasi password wajib diisi";
+                    if (val != _passwordController.text)
+                      return "Password tidak cocok";
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 20),
 
@@ -151,13 +242,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 name: _nameController.text,
                                 email: _emailController.text,
                                 password: _passwordController.text,
+                                username: _usernameController.text,
                               );
+
+                              if (!context.mounted) return;
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
                                     result['message'] ?? 'Registrasi gagal',
                                   ),
+                                  backgroundColor: result['status'] == 'success'
+                                      ? Colors.green
+                                      : Colors.red,
                                 ),
                               );
 
@@ -189,6 +286,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 20),
               ],
             ),
           ),

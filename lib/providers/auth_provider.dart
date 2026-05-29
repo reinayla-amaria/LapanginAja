@@ -10,6 +10,7 @@ class AuthProvider with ChangeNotifier {
   String? _token;
   String? _userName;
   String? _userEmail;
+  String? _username;
   Map<String, dynamic>? _user;
 
   bool get isLoading => _isLoading;
@@ -18,9 +19,9 @@ class AuthProvider with ChangeNotifier {
   String? get userId => _userId;
   String? get userName => _userName;
   String? get userEmail => _userEmail;
+  String? get username => _username;
   Map<String, dynamic>? get user => _user;
 
-  // FIX: Base URL harus berhenti di /api
   final String baseUrl = "https://lapanginaja.web.id/api";
 
   Map<String, String> get _headers => {
@@ -36,13 +37,18 @@ class AuthProvider with ChangeNotifier {
       _userName = prefs.getString('user_name');
       _userEmail = prefs.getString('user_email');
       _userId = prefs.getString('user_id');
+      _username = prefs.getString('username');
     }
     notifyListeners();
     return _isLoggedIn;
   }
 
+  // -------------------------------------------------------
+  // REGISTER — sekarang kirim username juga
+  // -------------------------------------------------------
   Future<Map<String, dynamic>> register({
     required String name,
+    required String username,
     required String email,
     required String password,
   }) async {
@@ -50,10 +56,11 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/register'), // Jadi: api/register (BENAR)
+        Uri.parse('$baseUrl/register'),
         headers: _headers,
         body: jsonEncode({
           'name': name,
+          'username': username,
           'email': email,
           'password': password,
           'password_confirmation': password,
@@ -70,12 +77,15 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // -------------------------------------------------------
+  // LOGIN
+  // -------------------------------------------------------
   Future<Map<String, dynamic>> login(String email, String password) async {
     _isLoading = true;
     notifyListeners();
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/login'), // Jadi: api/login (BENAR)
+        Uri.parse('$baseUrl/login'),
         headers: _headers,
         body: jsonEncode({'email': email, 'password': password}),
       );
@@ -85,6 +95,7 @@ class AuthProvider with ChangeNotifier {
         _userName = result['user']['name'];
         _userEmail = result['user']['email'];
         _userId = result['user']['id'].toString();
+        _username = result['user']['username'];
         _isLoggedIn = true;
 
         final prefs = await SharedPreferences.getInstance();
@@ -93,6 +104,9 @@ class AuthProvider with ChangeNotifier {
         await prefs.setString('user_name', _userName!);
         await prefs.setString('user_email', _userEmail!);
         await prefs.setString('user_id', _userId!);
+        if (_username != null) {
+          await prefs.setString('username', _username!);
+        }
       }
       _isLoading = false;
       notifyListeners();
@@ -104,6 +118,9 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // -------------------------------------------------------
+  // GOOGLE LOGIN
+  // -------------------------------------------------------
   Future<Map<String, dynamic>> googleLogin({
     required String name,
     required String email,
@@ -113,7 +130,7 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
     try {
       final response = await http.post(
-        Uri.parse("$baseUrl/register_google"), // Jadi: api/google-login (BENAR)
+        Uri.parse("$baseUrl/register_google"),
         headers: _headers,
         body: jsonEncode({'name': name, 'email': email, 'google_id': googleId}),
       );
@@ -125,15 +142,18 @@ class AuthProvider with ChangeNotifier {
         _userName = data['user']['name'];
         _userEmail = data['user']['email'];
         _userId = data['user']['id'].toString();
+        _username = data['user']['username'];
         _isLoggedIn = true;
 
-        // FIX: Simpan semua data agar auto-login jalan
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setBool('is_login', true);
         await prefs.setString('token', _token!);
         await prefs.setString('user_name', _userName!);
         await prefs.setString('user_email', _userEmail!);
         await prefs.setString('user_id', _userId!);
+        if (_username != null) {
+          await prefs.setString('username', _username!);
+        }
 
         _isLoading = false;
         notifyListeners();
@@ -150,6 +170,9 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // -------------------------------------------------------
+  // LOGOUT
+  // -------------------------------------------------------
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
@@ -158,6 +181,7 @@ class AuthProvider with ChangeNotifier {
     _userName = null;
     _userEmail = null;
     _userId = null;
+    _username = null;
     _user = null;
     notifyListeners();
   }

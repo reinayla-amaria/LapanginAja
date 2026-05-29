@@ -32,7 +32,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfileData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _usernameController.text = prefs.getString('user_username') ?? "";
+      // FIX: sesuaikan key dengan yang disimpan di auth_provider
+      _usernameController.text = prefs.getString('username') ?? "";
       _nameController.text = prefs.getString('user_name') ?? "";
       _emailController.text = prefs.getString('user_email') ?? "";
       _phoneController.text = prefs.getString('user_phone') ?? "";
@@ -107,10 +108,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _saveProfileData() async {
-    setState(() => _isLoading = true);
-
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_username', _usernameController.text);
+    await prefs.setString('username', _usernameController.text);
     await prefs.setString('user_name', _nameController.text);
     await prefs.setString('user_email', _emailController.text);
     await prefs.setString('user_phone', _phoneController.text);
