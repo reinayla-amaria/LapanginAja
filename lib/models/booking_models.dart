@@ -8,7 +8,9 @@ class Booking {
   final String status;
   final double totalPrice;
   final String? userName;
-  final String? transactionId; // Sudah camelCase
+  final String? transactionId;
+  final String? mitraId;
+  final String? mitraName;
 
   Booking({
     required this.id,
@@ -21,16 +23,17 @@ class Booking {
     required this.totalPrice,
     this.userName,
     this.transactionId,
+    this.mitraId,
+    this.mitraName,
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
     final data = json.containsKey('data') ? json['data'] : json;
-
-    // Helper untuk memudahkan akses nested data
     final booking = data['booking'] ?? data;
     final lapangan = data['lapangan'] ?? {};
     final user = data['user'] ?? {};
     final payment = data['payment'] ?? {};
+    final mitra = lapangan['mitra'] ?? {};
 
     return Booking(
       id: booking['id']?.toString() ?? "",
@@ -45,6 +48,10 @@ class Booking {
           double.tryParse(booking['total_harga']?.toString() ?? "0") ?? 0.0,
       userName: user['name'] ?? "Penyewa",
       transactionId: payment['transaction_id'] ?? "-",
+      // Cek flat format dulu (dari /my-bookings), baru nested
+      mitraId: booking['mitra_id']?.toString() ?? mitra['id']?.toString() ?? "",
+      mitraName:
+          booking['mitra_name']?.toString() ?? mitra['name']?.toString() ?? "",
     );
   }
 }

@@ -132,9 +132,15 @@ class BookingProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
         _lastSnapToken = result['snap_token'] ?? '';
-        _lastBookingId = result['booking_id']?.toString() ?? ''; // tambah ini
+        _lastBookingId = result['booking_id']?.toString() ?? '';
         notifyListeners();
         return true;
+      } else if (response.statusCode == 409) {
+        // ✅ Slot sudah terisi
+        _errorMessage =
+            'Slot waktu ini sudah dipesan. Silakan pilih waktu lain.';
+        notifyListeners();
+        return false;
       }
       return false;
     } catch (e) {

@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../providers/chat_provider.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  final String mitraId;
+  final String mitraName;
+
+  const ChatScreen({super.key, required this.mitraId, required this.mitraName});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -11,49 +17,37 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-
-  final List<Map<String, dynamic>> _messages = [
-    {
-      "text": "Halo! Selamat datang di Lapangin.Aja. Ada yang bisa kami bantu?",
-      "isUser": false,
-      "time": DateFormat(
-        'HH:mm',
-      ).format(DateTime.now().subtract(const Duration(minutes: 5))),
-    },
-  ];
-
   final Color primaryBlue = const Color(0xFF093FB4);
+  String? _userId;
 
-  void _sendMessage() {
-    if (_messageController.text.trim().isEmpty) return;
-
-    setState(() {
-      _messages.add({
-        "text": _messageController.text,
-        "isUser": true, // Ini pesan dari User
-        "time": DateFormat('HH:mm').format(DateTime.now()),
-      });
-    });
-
-    _messageController.clear();
-    _scrollToBottom();
-
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        setState(() {
-          _messages.add({
-            "text":
-                "Terima kasih telah menghubungi kami. Admin sedang mengecek pesan Anda.",
-            "isUser": false,
-            "time": DateFormat('HH:mm').format(DateTime.now()),
-          });
-        });
-        _scrollToBottom();
-      }
-    });
+  @override
+  void initState() {
+    super.initState();
+    _loadUserAndListen();
   }
 
-  // Auto Scroll ke bawah
+  Future<void> _loadUserAndListen() async {
+    final prefs = await SharedPreferences.getInstance();
+    _userId = prefs.getString('user_id') ?? '';
+    if (_userId!.isNotEmpty) {
+      Provider.of<ChatProvider>(
+        context,
+        listen: false,
+      ).listenToChat(_userId!, widget.mitraId);
+    }
+  }
+
+  void _sendMessage() async {
+    if (_messageController.text.trim().isEmpty || _userId == null) return;
+    final text = _messageController.text.trim();
+    _messageController.clear();
+    await Provider.of<ChatProvider>(
+      context,
+      listen: false,
+    ).sendMessage(text, _userId!, widget.mitraId);
+    _scrollToBottom();
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -75,9 +69,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final chatProvider = Provider.of<ChatProvider>(context);
+    final messages = chatProvider.messages;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
-      // APP BAR
       appBar: AppBar(
         backgroundColor: primaryBlue,
         title: Row(
@@ -89,16 +87,16 @@ class _ChatScreenState extends State<ChatScreen> {
             const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
-                  "Admin Support",
-                  style: TextStyle(
+                  widget.mitraName,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
                 ),
-                Text(
+                const Text(
                   "Online",
                   style: TextStyle(fontSize: 12, color: Colors.white70),
                 ),
@@ -108,82 +106,84 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-
-      // BODY
       body: Column(
         children: [
-          // LIST PESAN
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                final isUser = msg['isUser'];
-
-                return Align(
-                  alignment: isUser
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.75,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isUser ? primaryBlue : Colors.white,
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(16),
-                        topRight: const Radius.circular(16),
-                        bottomLeft: isUser
-                            ? const Radius.circular(16)
-                            : Radius.zero,
-                        bottomRight: isUser
-                            ? Radius.zero
-                            : const Radius.circular(16),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 5,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          msg['text'],
-                          style: TextStyle(
-                            color: isUser ? Colors.white : Colors.black87,
-                            fontSize: 14,
+            child: messages.isEmpty
+                ? const Center(child: Text("Belum ada pesan"))
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: messages.length,
+                    itemBuilder: (context, index) {
+                      final msg = messages[index];
+                      return Align(
+                        alignment: msg.isUser
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Align(
-                          alignment: Alignment.bottomRight,
-                          child: Text(
-                            msg['time'],
-                            style: TextStyle(
-                              color: isUser ? Colors.white70 : Colors.grey,
-                              fontSize: 10,
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width * 0.75,
+                          ),
+                          decoration: BoxDecoration(
+                            color: msg.isUser ? primaryBlue : Colors.white,
+                            borderRadius: BorderRadius.only(
+                              topLeft: const Radius.circular(16),
+                              topRight: const Radius.circular(16),
+                              bottomLeft: msg.isUser
+                                  ? const Radius.circular(16)
+                                  : Radius.zero,
+                              bottomRight: msg.isUser
+                                  ? Radius.zero
+                                  : const Radius.circular(16),
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                msg.text,
+                                style: TextStyle(
+                                  color: msg.isUser
+                                      ? Colors.white
+                                      : Colors.black87,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Align(
+                                alignment: Alignment.bottomRight,
+                                child: Text(
+                                  DateFormat(
+                                    'HH:mm',
+                                  ).format(DateTime.parse(msg.time)),
+                                  style: TextStyle(
+                                    color: msg.isUser
+                                        ? Colors.white70
+                                        : Colors.grey,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
-
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
@@ -215,6 +215,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         borderSide: BorderSide.none,
                       ),
                     ),
+                    onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
                 const SizedBox(width: 10),

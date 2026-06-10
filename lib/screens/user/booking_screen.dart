@@ -28,17 +28,27 @@ class _BookingScreenState extends State<BookingScreen> {
     final bookingProv = Provider.of<BookingProvider>(context);
 
     // Filter pencarian sederhana
-    final List<Court> filteredCourts = bookingProv.courts.where((court) {
+
+    final Map<String, Court> uniqueMitra = {};
+
+    for (final court in bookingProv.courts) {
+      uniqueMitra.putIfAbsent(court.mitraId, () => court);
+    }
+
+    final List<Court> filteredCourts = uniqueMitra.values.where((court) {
       return court.name.toLowerCase().contains(_searchQuery.toLowerCase());
     }).toList();
-
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: Column(
         children: [
-          // HEADER & SEARCH BAR
           Container(
-            padding: const EdgeInsets.fromLTRB(24, 50, 24, 30),
+            padding: const EdgeInsets.only(
+              top: 50,
+              left: 24,
+              right: 24,
+              bottom: 30,
+            ),
             decoration: const BoxDecoration(
               color: Color(0xFF093FB4),
               borderRadius: BorderRadius.only(
@@ -48,16 +58,56 @@ class _BookingScreenState extends State<BookingScreen> {
             ),
             child: Column(
               children: [
-                Image.asset('assets/logo_white.png', height: 40),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // LOGO
+                    Image.asset('assets/logo_white.png', height: 40),
+
+                    // PROFIL (tanpa notif karena ini halaman booking)
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                        image: const DecorationImage(
+                          image: AssetImage('assets/anime 1.png'),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
                 const SizedBox(height: 20),
+
+                // SEARCH BAR
                 TextField(
                   controller: _searchController,
                   onChanged: (v) => setState(() => _searchQuery = v),
                   decoration: InputDecoration(
-                    hintText: "Cari Arena Badminton...",
+                    hintText: "Cari nama lapangan...",
+                    hintStyle: TextStyle(
+                      color: Colors.grey[500],
+                      fontStyle: FontStyle.italic,
+                    ),
                     fillColor: Colors.white,
                     filled: true,
-                    prefixIcon: const Icon(Icons.search),
+                    prefixIcon: const Icon(Icons.search, color: Colors.black),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, color: Colors.grey),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _searchQuery = "");
+                            },
+                          )
+                        : null,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(30),
                       borderSide: BorderSide.none,
@@ -74,7 +124,7 @@ class _BookingScreenState extends State<BookingScreen> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                "Pilih Venue",
+                "Pilih Arena Lapangan",
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             ),
@@ -169,10 +219,13 @@ class _BookingScreenState extends State<BookingScreen> {
 
                 // 3. Fallback jika Gagal (Tampilkan aset lokal)
                 errorBuilder: (context, error, stackTrace) {
-                  return Image.asset(
-                    'assets/lapangan.png', // Pastikan file ini ada
+                  debugPrint("Gagal load gambar: ${court.imageUrl}");
 
-                    fit: BoxFit.cover,
+                  return Container(
+                    color: Colors.grey[200],
+                    child: const Center(
+                      child: Icon(Icons.broken_image, size: 40),
+                    ),
                   );
                 },
               ),

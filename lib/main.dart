@@ -6,6 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'providers/booking_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/notification_provider.dart';
+import 'providers/chat_provider.dart';
 import 'screens/splash_screen.dart';
 import 'services/fcm_services.dart';
 
@@ -13,10 +14,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID', null);
 
-  // Init Firebase
-  await Firebase.initializeApp();
+  // Init Firebase — cek dulu biar tidak double init
+  await Firebase.initializeApp().catchError((e) {
+    debugPrint('Firebase already initialized: $e');
+  });
 
-  // Background FCM handler — HARUS sebelum runApp
+  // Background FCM handler
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   final authProvider = AuthProvider();
@@ -31,6 +34,7 @@ void main() async {
         ChangeNotifierProvider.value(value: authProvider),
         ChangeNotifierProvider(create: (_) => BookingProvider()),
         ChangeNotifierProvider.value(value: notifProvider),
+        ChangeNotifierProvider(create: (_) => ChatProvider()),
       ],
       child: MyApp(isLoggedIn: isLoggedIn),
     ),

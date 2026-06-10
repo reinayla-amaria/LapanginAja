@@ -60,10 +60,7 @@ class _SplashScreenState extends State<SplashScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: changeView
-                ? [
-                    const Color(0xFF1565C0), // Biru agak terang
-                    const Color(0xFF093FB4), // Biru utama
-                  ]
+                ? [const Color(0xFF1565C0), const Color(0xFF093FB4)]
                 : [Colors.white, Colors.white],
           ),
         ),

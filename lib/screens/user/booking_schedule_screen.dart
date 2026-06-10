@@ -11,7 +11,6 @@ import 'dart:convert';
 
 class BookingScheduleScreen extends StatefulWidget {
   final Court court;
-
   const BookingScheduleScreen({super.key, required this.court});
 
   @override
@@ -38,9 +37,9 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
   String? _selectedTime;
   DateTime? _selectedDate;
   DateTime _focusedMonth = DateTime.now();
-
   List<Court> _availableCourts = [];
   List<String> _fieldNames = [];
+  List<String> _bookedSlots = [];
   bool _isLoadingCourts = true;
 
   @override
@@ -50,27 +49,52 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
     _fetchSiblingCourts();
   }
 
+  Future<void> _fetchBookedSlots() async {
+    if (_selectedDate == null || _selectedField == null) return;
+    final selectedCourt = _availableCourts.firstWhere(
+      (c) => c.courtName == _selectedField,
+      orElse: () => widget.court,
+    );
+    final tanggal = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'https://lapanginaja.web.id/api/lapangan/${selectedCourt.id}/availability?tanggal=$tanggal',
+        ),
+        headers: {'Accept': 'application/json'},
+      );
+      if (response.statusCode == 200) {
+        final result = jsonDecode(response.body);
+        final List<dynamic> data = result['data'];
+        setState(() {
+          _bookedSlots = data.map((b) {
+            final jam = DateTime.parse(b['jam_mulai']);
+            return DateFormat('HH:mm').format(jam);
+          }).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetch availability: $e");
+    }
+  }
+
   Future<void> _fetchSiblingCourts() async {
     if (!mounted) return;
     setState(() => _isLoadingCourts = true);
-
     try {
       final response = await http.get(
         Uri.parse('https://lapanginaja.web.id/api/lapangan'),
         headers: {'Accept': 'application/json'},
       );
-
       if (response.statusCode == 200) {
         final Map<String, dynamic> result = jsonDecode(response.body);
         final List<dynamic> allData = result['data'];
-
         final List<Court> fetchedCourts = allData
             .where(
               (json) => json['mitra_id'].toString() == widget.court.mitraId,
             )
             .map((json) => Court.fromJson(json))
             .toList();
-
         if (mounted) {
           setState(() {
             _availableCourts = fetchedCourts;
@@ -109,13 +133,12 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // 1. HEADER
           Container(
             padding: const EdgeInsets.only(
-              top: 50,
+              top: 70,
               left: 24,
               right: 24,
-              bottom: 30,
+              bottom: 16,
             ),
             decoration: const BoxDecoration(
               color: primaryBlue,
@@ -124,58 +147,28 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
                 bottomRight: Radius.circular(30),
               ),
             ),
-            child: Column(
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                        padding: EdgeInsets.zero,
-                      ),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: Image.asset('assets/logo_white.png', height: 40),
-                      ),
-                    ),
-                    const SizedBox(width: 40),
-                  ],
-                ),
-                const SizedBox(height: 25),
-                TextField(
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    hintText: "cari lapangan",
-                    hintStyle: TextStyle(
-                      color: Colors.grey[500],
-                      fontStyle: FontStyle.italic,
-                    ),
-                    fillColor: Colors.white,
-                    filled: true,
-                    suffixIcon: const Icon(Icons.search, size: 28),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
-                    ),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
                   ),
                 ),
+                const SizedBox(width: 12),
+                Image.asset('assets/logo_white.png', height: 40),
+                const Spacer(),
               ],
             ),
           ),
 
-          // 2. KONTEN SCROLLABLE
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
@@ -227,16 +220,13 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
                                     "Pilih Lapangan",
                                     _fieldNames,
                                     _selectedField,
-                                    (val) =>
-                                        setState(() => _selectedField = val),
+                                    (val) {
+                                      setState(() => _selectedField = val);
+                                      _fetchBookedSlots();
+                                    },
                                   ),
                             const SizedBox(height: 10),
-                            _buildDropdown(
-                              "Pilih Waktu",
-                              timeList,
-                              _selectedTime,
-                              (val) => setState(() => _selectedTime = val),
-                            ),
+                            _buildTimeDropdown(),
                           ],
                         ),
                       ),
@@ -292,16 +282,12 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
     );
   }
 
-  // -------------------------------------------------------
-  // PROCESS BOOKING
-  // -------------------------------------------------------
   void _processBooking() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final bookingProvider = Provider.of<BookingProvider>(
       context,
       listen: false,
     );
-
     String? currentUserId = authProvider.userId;
 
     if (currentUserId == null ||
@@ -320,7 +306,7 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
     if (_availableCourts.isNotEmpty) {
       try {
         selectedCourtObj = _availableCourts.firstWhere(
-          (c) => c.name == _selectedField,
+          (c) => c.courtName == _selectedField,
         );
       } catch (_) {}
     }
@@ -334,39 +320,148 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
       pricePerHour: selectedCourtObj.pricePerHour,
     );
 
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            bookingProvider.errorMessage.isNotEmpty
+                ? bookingProvider.errorMessage
+                : 'Booking gagal. Silakan coba lagi.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if (success && mounted) {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('user_id') ?? '';
-      if (userId.isNotEmpty) {
-        bookingProvider.fetchBookings(userId);
-      }
-
-      final double total = selectedCourtObj.pricePerHour * 1;
-      final String formattedDate = DateFormat(
-        'yyyy-MM-dd',
-      ).format(_selectedDate!);
-      final String snapToken = bookingProvider.lastSnapToken;
-      final String bookingId = bookingProvider.lastBookingId;
+      if (userId.isNotEmpty) bookingProvider.fetchBookings(userId);
 
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => PaymentScreen(
-            bookingId: bookingId,
+            bookingId: bookingProvider.lastBookingId,
             court: selectedCourtObj,
-            date: formattedDate,
+            date: DateFormat('yyyy-MM-dd').format(_selectedDate!),
             time: _selectedTime!,
-            totalPrice: total,
-            snapToken: snapToken,
+            totalPrice: selectedCourtObj.pricePerHour * 1,
+            snapToken: bookingProvider.lastSnapToken,
           ),
         ),
       );
     }
   }
 
-  // -------------------------------------------------------
-  // WIDGET DROPDOWN
-  // -------------------------------------------------------
+  Widget _buildTimeDropdown() {
+    final now = DateTime.now();
+    final isToday =
+        _selectedDate != null &&
+        _selectedDate!.year == now.year &&
+        _selectedDate!.month == now.month &&
+        _selectedDate!.day == now.day;
+
+    // ✅ Reset _selectedTime kalau jam yang dipilih sudah lewat
+    if (isToday && _selectedTime != null) {
+      final jamMulai = _selectedTime!.split(' - ')[0];
+      final parts = jamMulai.split(':');
+      final slotTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        int.parse(parts[0]),
+        int.parse(parts[1]),
+      );
+      if (slotTime.isBefore(now)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          setState(() => _selectedTime = null);
+        });
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      height: 45,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.grey.shade400),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          hint: const Text(
+            "Pilih Waktu",
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          value: _selectedTime,
+          items: timeList.map((String time) {
+            final jamMulai = time.split(' - ')[0];
+            final isBooked = _bookedSlots.contains(jamMulai);
+
+            bool isPast = false;
+            if (isToday) {
+              final parts = jamMulai.split(':');
+              final slotTime = DateTime(
+                now.year,
+                now.month,
+                now.day,
+                int.parse(parts[0]),
+                int.parse(parts[1]),
+              );
+              isPast = slotTime.isBefore(now);
+            }
+
+            final isDisabled = isBooked || isPast;
+
+            return DropdownMenuItem<String>(
+              value: time, // ✅ selalu pakai value asli, bukan null
+              enabled: !isDisabled,
+              child: Text(
+                isBooked
+                    ? '$time (Penuh)'
+                    : isPast
+                    ? '$time (Lewat)'
+                    : time,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDisabled ? Colors.grey[400] : Colors.black87,
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            if (val == null) return;
+            // Cek lagi sebelum set, jaga-jaga
+            final jamMulai = val.split(' - ')[0];
+            final isBooked = _bookedSlots.contains(jamMulai);
+            bool isPast = false;
+            if (isToday) {
+              final parts = jamMulai.split(':');
+              final slotTime = DateTime(
+                now.year,
+                now.month,
+                now.day,
+                int.parse(parts[0]),
+                int.parse(parts[1]),
+              );
+              isPast = slotTime.isBefore(now);
+            }
+            if (!isBooked && !isPast) {
+              setState(() => _selectedTime = val);
+            }
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildDropdown(
     String hint,
     List<String> items,
@@ -410,27 +505,20 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
     );
   }
 
-  // -------------------------------------------------------
-  // WIDGET KALENDER
-  // -------------------------------------------------------
   Widget _buildDynamicCalendar() {
     final int year = _focusedMonth.year;
     final int month = _focusedMonth.month;
     final int daysInMonth = DateTime(year, month + 1, 0).day;
     final int firstWeekdayOfMonth = DateTime(year, month, 1).weekday;
-
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-
     final List<String> dayHeaders = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
     final List<DateTime?> calendarDays = List.generate(
       firstWeekdayOfMonth - 1,
       (index) => null,
     );
-
-    for (int i = 1; i <= daysInMonth; i++) {
+    for (int i = 1; i <= daysInMonth; i++)
       calendarDays.add(DateTime(year, month, i));
-    }
 
     return Container(
       decoration: BoxDecoration(
@@ -502,18 +590,19 @@ class _BookingScheduleScreenState extends State<BookingScheduleScreen> {
             itemBuilder: (context, index) {
               final date = calendarDays[index];
               if (date == null) return const SizedBox();
-
               bool isPastDate = date.isBefore(today);
               bool isSelected =
                   _selectedDate != null &&
                   date.year == _selectedDate!.year &&
                   date.month == _selectedDate!.month &&
                   date.day == _selectedDate!.day;
-
               return InkWell(
                 onTap: isPastDate
                     ? null
-                    : () => setState(() => _selectedDate = date),
+                    : () {
+                        setState(() => _selectedDate = date);
+                        _fetchBookedSlots();
+                      },
                 child: Container(
                   decoration: BoxDecoration(
                     color: isSelected ? Colors.blue[50] : null,

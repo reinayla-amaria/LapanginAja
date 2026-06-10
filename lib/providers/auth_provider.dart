@@ -185,4 +185,55 @@ class AuthProvider with ChangeNotifier {
     _user = null;
     notifyListeners();
   }
+
+  Future<Map<String, dynamic>> verifyOtp({
+    required String email,
+    required String otp,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/verify-otp'),
+        headers: _headers,
+        body: jsonEncode({'email': email, 'otp': otp}),
+      );
+      final result = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        _token = result['token'];
+        _userName = result['user']['name'];
+        _userEmail = result['user']['email'];
+        _userId = result['user']['id'].toString();
+        _username = result['user']['username'];
+        _isLoggedIn = true;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('is_login', true);
+        await prefs.setString('token', _token!);
+        await prefs.setString('user_name', _userName!);
+        await prefs.setString('user_email', _userEmail!);
+        await prefs.setString('user_id', _userId!);
+        if (_username != null) await prefs.setString('username', _username!);
+      }
+      _isLoading = false;
+      notifyListeners();
+      return result;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      return {'status': 'error', 'message': 'Koneksi gagal: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> resendOtp({required String email}) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/resend-otp'),
+        headers: _headers,
+        body: jsonEncode({'email': email}),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'status': 'error', 'message': 'Koneksi gagal: $e'};
+    }
+  }
 }

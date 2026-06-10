@@ -42,12 +42,11 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen> {
           // HEADER
           Container(
             padding: const EdgeInsets.only(
-              top: 50,
+              top: 70,
               left: 24,
               right: 24,
-              bottom: 25,
+              bottom: 16,
             ),
-            width: double.infinity,
             decoration: const BoxDecoration(
               color: primaryBlue,
               borderRadius: BorderRadius.only(
@@ -55,31 +54,24 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen> {
                 bottomRight: Radius.circular(30),
               ),
             ),
-            child: Column(
+            child: Row(
               children: [
-                Image.asset('assets/logo_white.png', height: 40),
-                const SizedBox(height: 10),
-                TextField(
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    hintText: "cari lapangan",
-                    hintStyle: TextStyle(
-                      color: Colors.grey[400],
-                      fontStyle: FontStyle.italic,
-                    ),
-                    fillColor: Colors.white,
-                    filled: true,
-                    suffixIcon: const Icon(Icons.search),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
-                    ),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
                   ),
                 ),
+                const SizedBox(width: 12),
+                Image.asset('assets/logo_white.png', height: 40),
+                const Spacer(),
               ],
             ),
           ),
@@ -163,25 +155,27 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen> {
           child: Image.asset('assets/sukses_screen.png', fit: BoxFit.contain),
         ),
 
-        const SizedBox(height: 40),
+        const SizedBox(height: 24),
 
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: accentGreen,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+        Center(
+          child: SizedBox(
+            width: 220,
+            height: 50,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentGreen,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-            ),
-            onPressed: () {
-              setState(() => _showDetail = true);
-            },
-            child: const Text(
-              "Lihat Detail Pesanan",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              onPressed: () {
+                setState(() => _showDetail = true);
+              },
+              child: const Text(
+                "Lihat Detail Pesanan",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ),

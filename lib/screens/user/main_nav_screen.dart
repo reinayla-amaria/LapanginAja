@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'booking_screen.dart';
-import 'chat_screen.dart';
 import 'profile_screen.dart';
+import 'chat_list_screen.dart';
 
 class MainNavScreen extends StatefulWidget {
   const MainNavScreen({super.key});
@@ -17,7 +17,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
   final List<Widget> _pages = [
     const HomeScreen(),
     const BookingScreen(),
-    const ChatScreen(),
+    const ChatListScreen(),
     const ProfileScreen(),
   ];
 

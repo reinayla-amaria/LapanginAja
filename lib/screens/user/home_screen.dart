@@ -104,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // LOGO
+                  
                     Image.asset('assets/logo_white.png', height: 40),
 
                     // NOTIF + PROFILE
@@ -170,8 +170,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             print("Profile clicked");
                           },
                           child: Container(
-                            width: 40,
-                            height: 40,
+                            width: 50,
+                            height: 50,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 2),

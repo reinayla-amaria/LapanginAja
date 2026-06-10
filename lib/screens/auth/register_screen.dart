@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '/services/google_auth_service.dart';
 import '/providers/auth_provider.dart';
 import '../user/main_nav_screen.dart';
+import 'otp_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -211,7 +212,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const MainNavScreen(),
+                            builder: (context) =>
+                                OtpScreen(email: _emailController.text),
                           ),
                         );
                       } else {
